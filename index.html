@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STEAM+ Hub - Central de Robótica & Cultura Maker</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Fontes modernas, dinâmicas e de alta legibilidade para alunos e professores -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="main-wrapper">
+        <div class="control-container">
+            <div class="brand-logo">
+                <h2>STEAM+ HUB</h2>
+                <p>ROBÓTICA & CULTURA MAKER</p>
+            </div>
+            <div id="controles">
+                <button id="iniciarBtn" class="gold-btn">Iniciar Sparky</button>
+                <button id="limparBtn" class="outline-btn">Limpar Tela</button>
+                <button id="encerrarBtn" class="dark-btn">Desconectar</button>
+            </div>
+        </div>
+
+        <div class="chat-container">
+            <header class="chat-header">
+                <h1>Laboratório Virtual</h1>
+                <div id="connection-status" class="status-offline">Conectando ao Sparky...</div>
+            </header>
+            <div id="chat-box" class="chat-box"></div>
+            <footer class="chat-input-area">
+                <input type="text" id="message-input" placeholder="Tire dúvidas sobre montagem, sensores, XP ou turmas...">
+                <button id="send-button">Enviar</button>
+            </footer>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
