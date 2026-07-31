@@ -1,5 +1,5 @@
 // Atualize para a URL do seu backend no Render
-const URL_BACKEND = ''; 
+const URL_BACKEND = 'https://steambot-backend.onrender.com'; 
 
 document.addEventListener('DOMContentLoaded', () => {
     let socket = null;
