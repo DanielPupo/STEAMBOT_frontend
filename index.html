@@ -3,40 +3,102 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>STEAM+ Hub - Central de Robótica & Cultura Maker</title>
+    <meta name="description" content="Sparky, o tutor virtual de robótica e cultura maker da plataforma STEAM+.">
+    <meta name="theme-color" content="#08111f">
+    <title>Sparky | Laboratório Virtual STEAM+</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
-    <!-- Fontes modernas, dinâmicas e de alta legibilidade para alunos e professores -->
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="main-wrapper">
-        <div class="control-container">
-            <div class="brand-logo">
-                <h2>STEAM+ HUB</h2>
-                <p>ROBÓTICA & CULTURA MAKER</p>
-            </div>
-            <div id="controles">
-                <button id="iniciarBtn" class="gold-btn">Iniciar Sparky</button>
-                <button id="limparBtn" class="outline-btn">Limpar Tela</button>
-                <button id="encerrarBtn" class="dark-btn">Desconectar</button>
-            </div>
-        </div>
+    <a class="skip-link" href="#message-input">Ir para a conversa</a>
 
-        <div class="chat-container">
-            <header class="chat-header">
-                <h1>Laboratório Virtual</h1>
-                <div id="connection-status" class="status-offline">Conectando ao Sparky...</div>
+    <main class="app-shell">
+        <aside class="sidebar" aria-label="Painel da sessão">
+            <div>
+                <a class="brand" href="#" aria-label="STEAM+ Hub — início">
+                    <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+                    <span><strong>STEAM<span>+</span> HUB</strong><small>Robótica & Cultura Maker</small></span>
+                </a>
+
+                <section class="intro-card" aria-labelledby="intro-title">
+                    <span class="eyebrow">Seu copiloto maker</span>
+                    <h2 id="intro-title">Construa, programe e aprenda.</h2>
+                    <p>Orientação prática para alunos e professores, do primeiro bloco ao robô em movimento.</p>
+                </section>
+
+                <section class="session-panel" aria-labelledby="session-title">
+                    <div class="section-heading">
+                        <h2 id="session-title">Sessão atual</h2>
+                        <span id="session-label">Não iniciada</span>
+                    </div>
+                    <div class="stats-grid">
+                        <article class="stat-card"><span>Mensagens</span><strong id="message-count">0</strong></article>
+                        <article class="stat-card"><span>Tempo</span><strong id="session-time">00:00</strong></article>
+                    </div>
+                </section>
+            </div>
+
+            <div class="sidebar-actions">
+                <button id="iniciarBtn" class="button button-primary" type="button"><span class="button-icon" aria-hidden="true">▶</span><span>Iniciar Sparky</span></button>
+                <div class="secondary-actions">
+                    <button id="novaConversaBtn" class="button button-secondary" type="button" disabled>Nova conversa</button>
+                    <button id="limparBtn" class="button button-secondary" type="button">Limpar tela</button>
+                </div>
+                <button id="encerrarBtn" class="button button-danger" type="button" disabled>Desconectar</button>
+            </div>
+        </aside>
+
+        <section class="workspace" aria-labelledby="chat-title">
+            <header class="workspace-header">
+                <div><span class="eyebrow">Laboratório virtual</span><h1 id="chat-title">Converse com o Sparky</h1></div>
+                <div id="connection-status" class="connection-badge is-offline" role="status" aria-live="polite">
+                    <span class="status-dot" aria-hidden="true"></span><span class="status-label">Aguardando início</span>
+                </div>
             </header>
-            <div id="chat-box" class="chat-box"></div>
-            <footer class="chat-input-area">
-                <input type="text" id="message-input" placeholder="Tire dúvidas sobre montagem, sensores, XP ou turmas...">
-                <button id="send-button">Enviar</button>
-            </footer>
-        </div>
-    </div>
 
+            <div class="chat-body">
+                <section class="quick-start" id="quick-start" aria-labelledby="quick-title">
+                    <div class="section-heading quick-heading">
+                        <div><span class="eyebrow">Comece por aqui</span><h2 id="quick-title">O que você quer explorar hoje?</h2></div>
+                        <span class="quick-hint">Clique para preparar a pergunta</span>
+                    </div>
+                    <div class="prompt-grid">
+                        <button class="prompt-card" type="button" data-prompt="Sou aluno(a) e quero criar meu primeiro projeto de robótica. Por onde começo?">
+                            <span class="prompt-icon is-yellow" aria-hidden="true">⚙</span><span><strong>Primeiro projeto</strong><small>Monte uma trilha de aprendizagem</small></span><span class="prompt-arrow" aria-hidden="true">→</span>
+                        </button>
+                        <button class="prompt-card" type="button" data-prompt="Explique de forma simples como sensores funcionam em um robô.">
+                            <span class="prompt-icon is-cyan" aria-hidden="true">◉</span><span><strong>Sensores</strong><small>Entenda entradas e respostas</small></span><span class="prompt-arrow" aria-hidden="true">→</span>
+                        </button>
+                        <button class="prompt-card" type="button" data-prompt="Sou professor(a). Crie uma ideia de aula maker de 50 minutos para minha turma.">
+                            <span class="prompt-icon is-violet" aria-hidden="true">✦</span><span><strong>Plano de aula</strong><small>Atividade maker em 50 minutos</small></span><span class="prompt-arrow" aria-hidden="true">→</span>
+                        </button>
+                    </div>
+                </section>
+
+                <div id="chat-box" class="chat-box" role="log" aria-live="polite" aria-relevant="additions"></div>
+                <div id="typing-indicator" class="typing-indicator" hidden aria-live="polite">
+                    <span class="avatar" aria-hidden="true">S+</span><span class="typing-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>Sparky está organizando a resposta…</span>
+                </div>
+            </div>
+
+            <footer class="composer">
+                <label class="sr-only" for="message-input">Mensagem para o Sparky</label>
+                <div class="input-wrap">
+                    <textarea id="message-input" rows="1" maxlength="1500" placeholder="Pergunte sobre montagem, sensores, programação ou planos de aula…" disabled></textarea>
+                    <span id="char-counter" aria-live="polite">0 / 1500</span>
+                </div>
+                <button id="send-button" class="send-button" type="button" disabled aria-label="Enviar mensagem"><span>Enviar</span><span aria-hidden="true">↗</span></button>
+                <p class="composer-note">Enter para enviar · Shift + Enter para quebrar a linha</p>
+            </footer>
+        </section>
+    </main>
+
+    <div id="toast-region" class="toast-region" aria-live="assertive" aria-atomic="true"></div>
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

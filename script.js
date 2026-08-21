@@ -1,500 +1,438 @@
-// ============================================================
-// CONFIGURAÇÕES
-// ============================================================
+(() => {
+    'use strict';
 
-const URL_BACKEND = 'https://steambot-backend.onrender.com';
-
-
-// ============================================================
-// INICIALIZAÇÃO
-// ============================================================
-
-document.addEventListener('DOMContentLoaded', () => {
-
-    let socket = null;
-    let isProcessing = false;
-
-    const chatBox = document.getElementById('chat-box');
-    const messageInput = document.getElementById('message-input');
-    const sendButton = document.getElementById('send-button');
-    const connectionStatus = document.getElementById('connection-status');
-
-    const iniciarBtn = document.getElementById('iniciarBtn');
-    const encerrarBtn = document.getElementById('encerrarBtn');
-    const limparBtn = document.getElementById('limparBtn');
-
-
-    // ========================================================
-    // MENSAGENS
-    // ========================================================
-
-    function addMessageToChat(sender, text, type = 'normal') {
-
-        const messageElement = document.createElement('div');
-
-        messageElement.classList.add('message');
-
-        if (sender.toLowerCase() === 'user') {
-            messageElement.classList.add('user-message');
-            sender = 'Você';
-
-        } else if (sender.toLowerCase() === 'bot') {
-            messageElement.classList.add('bot-message');
-            sender = 'Sparky';
-
-        } else {
-            messageElement.classList.add('status-message');
-        }
-
-
-        if (type === 'error') {
-            messageElement.classList.add('error-text');
-            sender = 'Erro';
-        }
-
-
-        if (type === 'status') {
-            messageElement.classList.add('status-text');
-            sender = 'Laboratório';
-        }
-
-
-        const senderSpan = document.createElement('strong');
-
-        senderSpan.textContent = `${sender}: `;
-
-        messageElement.appendChild(senderSpan);
-
-
-        const textSpan = document.createElement('span');
-
-
-        if (type === 'normal') {
-
-            // O marked transforma Markdown em HTML.
-            textSpan.innerHTML = marked.parse(text);
-
-        } else {
-
-            textSpan.textContent = text;
-        }
-
-
-        messageElement.appendChild(textSpan);
-
-        chatBox.appendChild(messageElement);
-
-        chatBox.scrollTop = chatBox.scrollHeight;
-    }
-
-
-    // ========================================================
-    // CONTROLE DO CHAT
-    // ========================================================
-
-    function setChatEnabled(enabled) {
-
-        messageInput.disabled = !enabled;
-        sendButton.disabled = !enabled;
-
-        if (!enabled) {
-            isProcessing = false;
-        }
-    }
-
-
-    function setProcessing(processing) {
-
-        isProcessing = processing;
-
-        if (processing) {
-
-            messageInput.disabled = true;
-            sendButton.disabled = true;
-            sendButton.textContent = 'Sparky...';
-
-        } else {
-
-            const connected = socket && socket.connected;
-
-            messageInput.disabled = !connected;
-            sendButton.disabled = !connected;
-            sendButton.textContent = 'Enviar';
-        }
-    }
-
-
-    // ========================================================
-    // ESTADO INICIAL
-    // ========================================================
-
-    setChatEnabled(false);
-
-    connectionStatus.textContent = 'Aguardando Inicialização';
-    connectionStatus.className = 'status-offline';
-
-    addMessageToChat(
-        'Status',
-        'Seja bem-vindo ao STEAM+ Hub. Clique em "Iniciar Sparky" para ativar o assistente.',
-        'status'
-    );
-
-
-    // ========================================================
-    // INICIAR CONVERSA
-    // ========================================================
-
-    function iniciarConversa() {
-
-        if (socket && socket.connected) {
-            return;
-        }
-
-
-        connectionStatus.textContent = 'Conectando...';
-        connectionStatus.className = 'status-offline';
-
-        setChatEnabled(false);
-
-
-        socket = io(URL_BACKEND, {
-
+    const CONFIG = Object.freeze({
+        backendUrl: window.STEAMBOT_CONFIG?.backendUrl || 'https://steambot-backend.onrender.com',
+        maxMessageLength: 1500,
+        responseTimeoutMs: 60000,
+        socketOptions: {
             transports: ['websocket', 'polling'],
-
             reconnection: true,
-
-            reconnectionAttempts: 5,
-
+            reconnectionAttempts: 6,
             reconnectionDelay: 1000,
-
             reconnectionDelayMax: 5000,
+            timeout: 20000
+        }
+    });
 
-            timeout: 15000
+    const state = {
+        socket: null,
+        connected: false,
+        processing: false,
+        manualDisconnect: false,
+        connectErrorShown: false,
+        welcomeShown: false,
+        messageCount: 0,
+        sessionStartedAt: null,
+        timerId: null,
+        responseTimeoutId: null
+    };
+
+    const elements = {};
+
+    document.addEventListener('DOMContentLoaded', initialize);
+
+    function initialize() {
+        Object.assign(elements, {
+            chatBox: document.getElementById('chat-box'),
+            messageInput: document.getElementById('message-input'),
+            sendButton: document.getElementById('send-button'),
+            connectionStatus: document.getElementById('connection-status'),
+            statusLabel: document.querySelector('#connection-status .status-label'),
+            startButton: document.getElementById('iniciarBtn'),
+            disconnectButton: document.getElementById('encerrarBtn'),
+            clearButton: document.getElementById('limparBtn'),
+            newConversationButton: document.getElementById('novaConversaBtn'),
+            quickStart: document.getElementById('quick-start'),
+            typingIndicator: document.getElementById('typing-indicator'),
+            characterCounter: document.getElementById('char-counter'),
+            messageCount: document.getElementById('message-count'),
+            sessionTime: document.getElementById('session-time'),
+            sessionLabel: document.getElementById('session-label'),
+            toastRegion: document.getElementById('toast-region')
         });
 
+        bindEvents();
+        updateConnectionStatus('offline', 'Aguardando início');
+        updateControls();
+        addMessage('system', 'Ambiente pronto. Inicie o Sparky ou escolha uma sugestão para começar.');
+    }
 
-        // ====================================================
-        // CONECTADO
-        // ====================================================
+    function bindEvents() {
+        elements.startButton.addEventListener('click', startConversation);
+        elements.disconnectButton.addEventListener('click', disconnectConversation);
+        elements.clearButton.addEventListener('click', () => clearChat('Histórico visual limpo. O contexto do Sparky foi mantido.'));
+        elements.newConversationButton.addEventListener('click', startNewConversation);
+        elements.sendButton.addEventListener('click', sendMessage);
 
-        socket.on('connect', () => {
-
-            console.log(
-                'Socket conectado:',
-                socket.id
-            );
-
-
-            connectionStatus.textContent = 'Sparky Conectado';
-
-            connectionStatus.className = 'status-online';
-
-
-            addMessageToChat(
-                'Status',
-                'Conexão estabelecida com a Central STEAM+.',
-                'status'
-            );
-
-
-            setChatEnabled(true);
+        elements.messageInput.addEventListener('input', () => {
+            updateCharacterCounter();
+            resizeComposer();
+            updateControls();
         });
 
-
-        // ====================================================
-        // DESCONECTADO
-        // ====================================================
-
-        socket.on('disconnect', (reason) => {
-
-            console.warn(
-                'Socket desconectado:',
-                reason
-            );
-
-
-            connectionStatus.textContent = 'Desconectado';
-
-            connectionStatus.className = 'status-offline';
-
-
-            setChatEnabled(false);
-
-
-            if (reason !== 'io client disconnect') {
-
-                addMessageToChat(
-                    'Status',
-                    'A conexão foi interrompida. O sistema tentará reconectar automaticamente.',
-                    'status'
-                );
+        elements.messageInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
             }
         });
 
-
-        // ====================================================
-        // ERRO DE CONEXÃO
-        // ====================================================
-
-        socket.on('connect_error', (error) => {
-
-            console.error(
-                'Erro Socket.IO:',
-                error
-            );
-
-
-            connectionStatus.textContent = 'Erro de Conexão';
-
-            connectionStatus.className = 'status-offline';
-
-
-            setChatEnabled(false);
-
-
-            addMessageToChat(
-                'Status',
-                'Não foi possível conectar ao servidor do Sparky.',
-                'status'
-            );
+        document.querySelectorAll('[data-prompt]').forEach((button) => {
+            button.addEventListener('click', () => selectPrompt(button.dataset.prompt));
         });
 
+        document.querySelector('.brand').addEventListener('click', (event) => {
+            event.preventDefault();
+            elements.startButton.focus();
+        });
+    }
 
-        // ====================================================
-        // STATUS DA CONEXÃO
-        // ====================================================
+    function startConversation() {
+        if (state.connected) {
+            elements.messageInput.focus();
+            return;
+        }
+
+        if (typeof window.io !== 'function') {
+            addMessage('error', 'Não foi possível carregar o módulo de conexão. Atualize a página e tente novamente.');
+            showToast('Módulo de conexão indisponível.', 'error');
+            return;
+        }
+
+        destroySocket();
+        state.manualDisconnect = false;
+        state.connectErrorShown = false;
+        state.welcomeShown = false;
+        state.sessionStartedAt = null;
+        elements.sessionTime.textContent = '00:00';
+        updateConnectionStatus('connecting', 'Conectando ao Sparky…');
+
+        const socket = window.io(CONFIG.backendUrl, CONFIG.socketOptions);
+        state.socket = socket;
+        registerSocketEvents(socket);
+        updateControls();
+    }
+
+    function registerSocketEvents(socket) {
+        socket.on('connect', () => {
+            if (socket !== state.socket) return;
+
+            state.connected = true;
+            state.connectErrorShown = false;
+            startSessionTimer();
+            updateConnectionStatus('online', 'Sparky conectado');
+            updateControls();
+            elements.messageInput.focus();
+        });
 
         socket.on('status_conexao', (data) => {
+            if (socket !== state.socket || state.welcomeShown) return;
 
-            console.log(
-                'Status recebido:',
-                data
-            );
+            const welcome = data?.mensagem_inicial
+                || 'Olá! Antes de começar, conte para mim: você é aluno(a) ou professor(a) de STEAM+?';
+
+            addMessage('bot', welcome);
+            state.welcomeShown = true;
         });
 
+        socket.on('disconnect', (reason) => {
+            if (socket !== state.socket) return;
 
-        // ====================================================
-        // STATUS DO BOT
-        // ====================================================
+            state.connected = false;
+            setProcessing(false);
+            stopSessionTimer();
+
+            if (state.manualDisconnect || reason === 'io client disconnect') {
+                updateConnectionStatus('offline', 'Sessão encerrada');
+                elements.sessionLabel.textContent = 'Encerrada';
+            } else {
+                updateConnectionStatus('connecting', 'Reconectando…');
+                addMessage('system', 'A conexão caiu. Tentaremos restabelecê-la automaticamente.');
+            }
+
+            updateControls();
+        });
+
+        socket.on('connect_error', () => {
+            if (socket !== state.socket) return;
+
+            state.connected = false;
+            updateConnectionStatus('offline', 'Servidor indisponível');
+            updateControls();
+
+            if (!state.connectErrorShown) {
+                addMessage('error', 'Não foi possível alcançar o Sparky. O servidor pode estar iniciando; tente novamente em instantes.');
+                showToast('Falha ao conectar com o servidor.', 'error');
+                state.connectErrorShown = true;
+            }
+        });
 
         socket.on('status_bot', (data) => {
-
-            if (!data) {
-                return;
-            }
-
-
-            if (data.status === 'processando') {
-
-                setProcessing(true);
-
-            } else if (data.status === 'concluido') {
-
-                setProcessing(false);
-            }
+            if (socket !== state.socket) return;
+            setProcessing(data?.status === 'processando');
         });
-
-
-        // ====================================================
-        // NOVA MENSAGEM
-        // ====================================================
 
         socket.on('nova_mensagem', (data) => {
+            if (socket !== state.socket) return;
 
-            console.log(
-                'Resposta recebida:',
-                data
-            );
-
-
-            if (!data || !data.texto) {
-                console.error(
-                    'Resposta inválida recebida do backend.'
-                );
-
+            clearResponseTimeout();
+            if (!data || typeof data.texto !== 'string' || !data.texto.trim()) {
+                addMessage('error', 'O servidor retornou uma resposta inválida. Tente reformular a pergunta.');
+                setProcessing(false);
                 return;
             }
 
-
-            addMessageToChat(
-                data.remetente,
-                data.texto
-            );
-
-
+            addMessage('bot', data.texto);
             setProcessing(false);
         });
 
+        socket.on('conversa_resetada', (data) => {
+            if (socket !== state.socket) return;
 
-        // ====================================================
-        // ERROS DO BACKEND
-        // ====================================================
+            clearChat();
+            state.welcomeShown = true;
+            addMessage('bot', data?.mensagem || 'Nova conversa iniciada. Você é aluno(a) ou professor(a)?');
+            showToast('Nova conversa iniciada.');
+        });
 
         socket.on('erro', (data) => {
+            if (socket !== state.socket) return;
 
-            console.error(
-                'Erro retornado pelo backend:',
-                data
-            );
-
-
-            const mensagemErro =
-                data?.erro ||
-                'Ocorreu um erro ao processar sua mensagem.';
-
-
-            addMessageToChat(
-                'Erro',
-                mensagemErro,
-                'error'
-            );
-
-
+            clearResponseTimeout();
+            addMessage('error', data?.erro || 'Não foi possível processar sua mensagem. Tente novamente.');
             setProcessing(false);
+        });
+
+        socket.io.on('reconnect_attempt', () => {
+            if (socket !== state.socket) return;
+            updateConnectionStatus('connecting', 'Reconectando…');
+        });
+
+        socket.io.on('reconnect_failed', () => {
+            if (socket !== state.socket) return;
+            destroySocket();
+            state.connected = false;
+            updateConnectionStatus('offline', 'Não foi possível reconectar');
+            updateControls();
+            showToast('Reconexão esgotada. Use “Iniciar Sparky” para tentar novamente.', 'error');
         });
     }
 
+    function disconnectConversation() {
+        if (!state.socket) return;
 
-    // ========================================================
-    // ENCERRAR CONVERSA
-    // ========================================================
-
-    function encerrarConversa() {
-
-        if (!socket) {
-            return;
-        }
-
-
-        if (socket.connected) {
-            socket.disconnect();
-        }
-
-
-        setChatEnabled(false);
-
-        connectionStatus.textContent = 'Sessão Encerrada';
-
-        connectionStatus.className = 'status-offline';
-
-
-        addMessageToChat(
-            'Status',
-            'Sua sessão com o Sparky foi encerrada.',
-            'status'
-        );
+        state.manualDisconnect = true;
+        state.socket.disconnect();
+        destroySocket();
+        state.connected = false;
+        setProcessing(false);
+        stopSessionTimer();
+        updateConnectionStatus('offline', 'Sessão encerrada');
+        elements.sessionLabel.textContent = 'Encerrada';
+        addMessage('system', 'Sessão encerrada com segurança. Você pode iniciar novamente quando quiser.');
+        updateControls();
     }
 
+    function destroySocket() {
+        if (!state.socket) return;
 
-    // ========================================================
-    // LIMPAR CHAT
-    // ========================================================
-
-    function limparTela() {
-
-        chatBox.innerHTML = '';
-
-        addMessageToChat(
-            'Status',
-            'Histórico visual da conversa limpo.',
-            'status'
-        );
+        state.socket.removeAllListeners();
+        state.socket.io?.removeAllListeners();
+        if (state.socket.connected) state.socket.disconnect();
+        state.socket = null;
     }
 
+    function startNewConversation() {
+        if (!state.socket || !state.connected || state.processing) return;
+        state.socket.emit('resetar_conversa');
+    }
 
-    // ========================================================
-    // ENVIAR MENSAGEM
-    // ========================================================
+    function sendMessage() {
+        const text = elements.messageInput.value.trim();
 
-    function sendMessageToServer() {
-
-        const messageText =
-            messageInput.value.trim();
-
-
-        if (messageText === '') {
+        if (!text || state.processing) return;
+        if (text.length > CONFIG.maxMessageLength) {
+            showToast(`A mensagem deve ter até ${CONFIG.maxMessageLength} caracteres.`, 'error');
+            return;
+        }
+        if (!state.socket || !state.connected) {
+            showToast('Inicie o Sparky antes de enviar uma mensagem.', 'error');
             return;
         }
 
-
-        if (isProcessing) {
-            return;
-        }
-
-
-        if (!socket || !socket.connected) {
-
-            addMessageToChat(
-                'Erro',
-                'Conexão indisponível no momento.',
-                'error'
-            );
-
-            return;
-        }
-
-
-        // Mostra imediatamente a mensagem do usuário.
-        addMessageToChat(
-            'user',
-            messageText
-        );
-
-
-        // Limpa o campo.
-        messageInput.value = '';
-
-
-        // Informa que estamos esperando o Sparky.
+        addMessage('user', text);
+        elements.messageInput.value = '';
+        updateCharacterCounter();
+        resizeComposer();
         setProcessing(true);
-
-
-        // Envia para o backend.
-        socket.emit(
-            'enviar_mensagem',
-            {
-                mensagem: messageText
-            }
-        );
+        state.socket.emit('enviar_mensagem', { mensagem: text });
+        armResponseTimeout();
     }
 
+    function selectPrompt(prompt) {
+        if (!prompt) return;
 
-    // ========================================================
-    // EVENTOS
-    // ========================================================
+        elements.messageInput.value = prompt.slice(0, CONFIG.maxMessageLength);
+        updateCharacterCounter();
+        resizeComposer();
 
-    iniciarBtn.addEventListener(
-        'click',
-        iniciarConversa
-    );
-
-
-    encerrarBtn.addEventListener(
-        'click',
-        encerrarConversa
-    );
-
-
-    limparBtn.addEventListener(
-        'click',
-        limparTela
-    );
-
-
-    sendButton.addEventListener(
-        'click',
-        sendMessageToServer
-    );
-
-
-    messageInput.addEventListener(
-        'keypress',
-        (event) => {
-
-            if (event.key === 'Enter') {
-                sendMessageToServer();
-            }
+        if (!state.connected) {
+            startConversation();
+            showToast('Sugestão preparada. Aguarde a conexão para enviar.');
+        } else {
+            elements.messageInput.focus();
         }
-    );
+        updateControls();
+    }
 
-});
+    function addMessage(sender, text) {
+        const normalizedSender = ['user', 'bot', 'system', 'error'].includes(sender) ? sender : 'bot';
+        const message = document.createElement('article');
+        const safeText = String(text ?? '');
+
+        if (normalizedSender === 'system' || normalizedSender === 'error') {
+            message.className = 'message is-system';
+            const pill = document.createElement('p');
+            pill.className = `system-pill${normalizedSender === 'error' ? ' is-error' : ''}`;
+            pill.textContent = safeText;
+            message.appendChild(pill);
+        } else {
+            message.className = `message is-${normalizedSender}`;
+            const avatar = document.createElement('span');
+            avatar.className = 'avatar';
+            avatar.setAttribute('aria-hidden', 'true');
+            avatar.textContent = normalizedSender === 'user' ? 'EU' : 'S+';
+
+            const card = document.createElement('div');
+            card.className = 'message-card';
+            const meta = document.createElement('div');
+            meta.className = 'message-meta';
+            meta.innerHTML = `<span>${normalizedSender === 'user' ? 'Você' : 'Sparky'}</span><time>${formatTime(new Date())}</time>`;
+
+            const content = document.createElement('div');
+            content.className = 'message-content';
+            if (normalizedSender === 'bot') {
+                renderSafeMarkdown(content, safeText);
+            } else {
+                content.textContent = safeText;
+            }
+
+            card.append(meta, content);
+            message.append(avatar, card);
+            state.messageCount += 1;
+            elements.messageCount.textContent = String(state.messageCount);
+        }
+
+        elements.chatBox.appendChild(message);
+        elements.quickStart.hidden = state.messageCount > 1;
+        requestAnimationFrame(() => message.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
+    }
+
+    function renderSafeMarkdown(container, text) {
+        if (window.marked && window.DOMPurify) {
+            const parsed = window.marked.parse(text, { breaks: true, gfm: true });
+            container.innerHTML = window.DOMPurify.sanitize(parsed, {
+                USE_PROFILES: { html: true },
+                FORBID_TAGS: ['style', 'iframe', 'form', 'input', 'button'],
+                FORBID_ATTR: ['style']
+            });
+
+            container.querySelectorAll('a').forEach((link) => {
+                link.target = '_blank';
+                link.rel = 'noopener noreferrer';
+            });
+            return;
+        }
+
+        container.textContent = text;
+    }
+
+    function clearChat(message = '') {
+        elements.chatBox.replaceChildren();
+        state.messageCount = 0;
+        elements.messageCount.textContent = '0';
+        elements.quickStart.hidden = false;
+        if (message) addMessage('system', message);
+    }
+
+    function setProcessing(processing) {
+        state.processing = Boolean(processing);
+        elements.typingIndicator.hidden = !state.processing;
+        elements.sendButton.querySelector('span:first-child').textContent = state.processing ? 'Aguarde' : 'Enviar';
+        if (!state.processing) clearResponseTimeout();
+        updateControls();
+    }
+
+    function updateControls() {
+        const hasText = Boolean(elements.messageInput.value.trim());
+        const canWrite = state.connected && !state.processing;
+
+        elements.messageInput.disabled = !canWrite;
+        elements.sendButton.disabled = !canWrite || !hasText;
+        elements.startButton.disabled = state.connected || Boolean(state.socket && !state.manualDisconnect);
+        elements.disconnectButton.disabled = !state.socket;
+        elements.newConversationButton.disabled = !canWrite;
+    }
+
+    function updateConnectionStatus(status, label) {
+        elements.connectionStatus.className = `connection-badge is-${status}`;
+        elements.statusLabel.textContent = label;
+    }
+
+    function updateCharacterCounter() {
+        const length = elements.messageInput.value.length;
+        elements.characterCounter.textContent = `${length} / ${CONFIG.maxMessageLength}`;
+    }
+
+    function resizeComposer() {
+        elements.messageInput.style.height = 'auto';
+        elements.messageInput.style.height = `${Math.min(elements.messageInput.scrollHeight, 140)}px`;
+    }
+
+    function startSessionTimer() {
+        if (!state.sessionStartedAt) state.sessionStartedAt = Date.now();
+        elements.sessionLabel.textContent = 'Em andamento';
+        updateSessionTimer();
+        if (!state.timerId) state.timerId = window.setInterval(updateSessionTimer, 1000);
+    }
+
+    function stopSessionTimer() {
+        if (state.timerId) window.clearInterval(state.timerId);
+        state.timerId = null;
+    }
+
+    function updateSessionTimer() {
+        if (!state.sessionStartedAt) return;
+        const elapsedSeconds = Math.floor((Date.now() - state.sessionStartedAt) / 1000);
+        const minutes = String(Math.floor(elapsedSeconds / 60)).padStart(2, '0');
+        const seconds = String(elapsedSeconds % 60).padStart(2, '0');
+        elements.sessionTime.textContent = `${minutes}:${seconds}`;
+    }
+
+    function armResponseTimeout() {
+        clearResponseTimeout();
+        state.responseTimeoutId = window.setTimeout(() => {
+            if (!state.processing) return;
+            setProcessing(false);
+            addMessage('error', 'A resposta está demorando mais que o esperado. Verifique a conexão e tente novamente.');
+        }, CONFIG.responseTimeoutMs);
+    }
+
+    function clearResponseTimeout() {
+        if (state.responseTimeoutId) window.clearTimeout(state.responseTimeoutId);
+        state.responseTimeoutId = null;
+    }
+
+    function showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `toast${type === 'error' ? ' is-error' : ''}`;
+        toast.textContent = message;
+        elements.toastRegion.appendChild(toast);
+        window.setTimeout(() => toast.remove(), 4500);
+    }
+
+    function formatTime(date) {
+        return new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(date);
+    }
+})();
