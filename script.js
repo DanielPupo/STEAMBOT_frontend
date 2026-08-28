@@ -3,6 +3,10 @@
 
     const CONFIG = Object.freeze({
         backendUrl: window.STEAMBOT_CONFIG?.backendUrl || 'https://steambot-backend.onrender.com',
+        audience: resolveAudience(
+            window.STEAMBOT_CONFIG?.currentUser?.role
+            || window.STEAMBOT_CONFIG?.userRole
+        ),
         maxMessageLength: 1500,
         responseTimeoutMs: 60000,
         socketOptions: {
@@ -25,7 +29,9 @@
         messageCount: 0,
         sessionStartedAt: null,
         timerId: null,
-        responseTimeoutId: null
+        responseTimeoutId: null,
+        audience: CONFIG.audience,
+        xp: 0
     };
 
     const elements = {};
@@ -50,11 +56,25 @@
             sessionTime: document.getElementById('session-time'),
             sessionLabel: document.getElementById('session-label'),
             toastRegion: document.getElementById('toast-region'),
-            audienceButtons: document.querySelectorAll('[data-audience]'),
-            suggestionGroups: document.querySelectorAll('[data-suggestion-group]')
+            suggestionGroups: document.querySelectorAll('[data-suggestion-group]'),
+            roleContent: document.querySelectorAll('[data-role-content]'),
+            profileMascot: document.getElementById('profile-mascot'),
+            profileEyebrow: document.getElementById('profile-eyebrow'),
+            profileTitle: document.getElementById('intro-title'),
+            profileDescription: document.getElementById('profile-description'),
+            workspaceEyebrow: document.getElementById('workspace-eyebrow'),
+            quickEyebrow: document.getElementById('quick-eyebrow'),
+            quickTitle: document.getElementById('quick-title'),
+            suggestionsEyebrow: document.getElementById('suggestions-eyebrow'),
+            suggestionsTitle: document.getElementById('suggestions-title'),
+            studentProgress: document.getElementById('student-progress'),
+            xpCount: document.getElementById('xp-count'),
+            xpBar: document.getElementById('xp-bar'),
+            xpMessage: document.getElementById('xp-message')
         });
 
         bindEvents();
+        applyAudience();
         updateConnectionStatus('offline', 'Aguardando início');
         updateControls();
         addMessage('system', 'Ambiente pronto. Inicie o Sparky ou escolha uma sugestão para começar.');
@@ -84,10 +104,6 @@
             button.addEventListener('click', () => selectPrompt(button.dataset.prompt));
         });
 
-        elements.audienceButtons.forEach((button) => {
-            button.addEventListener('click', () => selectAudience(button.dataset.audience));
-        });
-
         document.querySelector('.brand').addEventListener('click', (event) => {
             event.preventDefault();
             elements.startButton.focus();
@@ -114,7 +130,10 @@
         elements.sessionTime.textContent = '00:00';
         updateConnectionStatus('connecting', 'Conectando ao Sparky…');
 
-        const socket = window.io(CONFIG.backendUrl, CONFIG.socketOptions);
+        const socket = window.io(CONFIG.backendUrl, {
+            ...CONFIG.socketOptions,
+            auth: { role: state.audience }
+        });
         state.socket = socket;
         registerSocketEvents(socket);
         updateControls();
@@ -190,6 +209,7 @@
             }
 
             addMessage('bot', data.texto);
+            awardXp(15);
             setProcessing(false);
         });
 
@@ -292,16 +312,55 @@
         updateControls();
     }
 
-    function selectAudience(audience) {
-        elements.audienceButtons.forEach((button) => {
-            const isActive = button.dataset.audience === audience;
-            button.classList.toggle('is-active', isActive);
-            button.setAttribute('aria-pressed', String(isActive));
+    function applyAudience() {
+        const isStudent = state.audience === 'student';
+        document.body.dataset.role = state.audience;
+
+        elements.roleContent.forEach((group) => {
+            group.hidden = group.dataset.roleContent !== state.audience;
+        });
+        elements.suggestionGroups.forEach((group) => {
+            group.hidden = group.dataset.suggestionGroup !== state.audience;
         });
 
-        elements.suggestionGroups.forEach((group) => {
-            group.hidden = group.dataset.suggestionGroup !== audience;
-        });
+        elements.studentProgress.hidden = !isStudent;
+        elements.profileMascot.textContent = isStudent ? '🤖' : '📘';
+        elements.profileEyebrow.textContent = isStudent ? 'Área do aluno' : 'Área do professor';
+        elements.profileTitle.textContent = isStudent ? 'Bora criar algo incrível?' : 'Planeje com clareza.';
+        elements.profileDescription.textContent = isStudent
+            ? 'Complete missões, ganhe XP e aprenda robótica construindo.'
+            : 'Apoio objetivo para aulas, avaliações e organização de turmas.';
+        elements.workspaceEyebrow.textContent = isStudent ? 'Laboratório de missões' : 'Assistente pedagógico';
+        elements.quickEyebrow.textContent = isStudent ? 'Escolha uma missão' : 'Ferramentas para sua aula';
+        elements.quickTitle.textContent = isStudent ? 'O que vamos construir hoje?' : 'Como o Sparky pode apoiar seu planejamento?';
+        elements.suggestionsEyebrow.textContent = isStudent ? 'Próximos desafios' : 'Atalhos pedagógicos';
+        elements.suggestionsTitle.textContent = isStudent
+            ? 'Continue aprendendo com um atalho'
+            : 'Acesse rapidamente os recursos mais usados';
+        elements.messageInput.placeholder = isStudent
+            ? 'Pergunte sobre montagem, sensores, programação ou robótica…'
+            : 'Peça um plano, uma rubrica ou uma estratégia para sua turma…';
+    }
+
+    function resolveAudience(role) {
+        const normalized = String(role || '').trim().toLowerCase();
+        return ['teacher', 'professor', 'professora'].includes(normalized) ? 'teacher' : 'student';
+    }
+
+    function awardXp(points) {
+        if (state.audience !== 'student') return;
+        state.xp += points;
+        const levelProgress = state.xp % 100;
+        elements.xpCount.textContent = `${state.xp} XP`;
+        elements.xpBar.style.width = `${levelProgress || (state.xp ? 100 : 0)}%`;
+
+        if (state.xp >= 100) {
+            elements.xpMessage.textContent = '🏆 Conquista desbloqueada: Inventor Maker!';
+        } else if (state.xp >= 45) {
+            elements.xpMessage.textContent = '⚡ Ótimo progresso! Falta pouco para uma conquista.';
+        } else {
+            elements.xpMessage.textContent = 'Cada resposta concluída vale 15 XP.';
+        }
     }
 
     function addMessage(sender, text) {
@@ -369,7 +428,11 @@
     function clearChat(message = '') {
         elements.chatBox.replaceChildren();
         state.messageCount = 0;
+        state.xp = 0;
         elements.messageCount.textContent = '0';
+        if (elements.xpCount) elements.xpCount.textContent = '0 XP';
+        if (elements.xpBar) elements.xpBar.style.width = '0%';
+        if (elements.xpMessage) elements.xpMessage.textContent = 'Comece uma missão para ganhar XP.';
         elements.quickStart.hidden = false;
         if (message) addMessage('system', message);
     }
