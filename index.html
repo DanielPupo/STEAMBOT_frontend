@@ -84,6 +84,28 @@
             </div>
 
             <footer class="composer">
+                <section class="composer-tools" aria-labelledby="suggestions-title">
+                    <div class="composer-tools-heading">
+                        <div>
+                            <span class="eyebrow">Atalhos inteligentes</span>
+                            <strong id="suggestions-title">Escolha seu perfil e comece mais rápido</strong>
+                        </div>
+                        <div class="audience-switch" role="group" aria-label="Perfil das sugestões">
+                            <button class="audience-tab is-active" type="button" data-audience="student" aria-pressed="true">Aluno</button>
+                            <button class="audience-tab" type="button" data-audience="teacher" aria-pressed="false">Professor</button>
+                        </div>
+                    </div>
+                    <div class="suggestion-chips" data-suggestion-group="student">
+                        <button class="suggestion-chip is-student" type="button" data-prompt="Sou aluno(a). Crie um desafio rápido de robótica que eu consiga começar em 5 minutos."><span aria-hidden="true">🚀</span> Desafio de 5 minutos</button>
+                        <button class="suggestion-chip is-student" type="button" data-prompt="Sou aluno(a). Ajude-me a fazer meu primeiro robô se movimentar, com passos simples."><span aria-hidden="true">⚙️</span> Fazer o robô andar</button>
+                        <button class="suggestion-chip is-student" type="button" data-prompt="Sou aluno(a). Transforme o conteúdo de sensores em uma missão curta com XP e conquista."><span aria-hidden="true">🏅</span> Missão com XP</button>
+                    </div>
+                    <div class="suggestion-chips" data-suggestion-group="teacher" hidden>
+                        <button class="suggestion-chip is-teacher" type="button" data-prompt="Sou professor(a). Crie um plano de aula maker de 50 minutos, com objetivo, materiais e etapas."><span aria-hidden="true">▤</span> Plano de aula</button>
+                        <button class="suggestion-chip is-teacher" type="button" data-prompt="Sou professor(a). Crie uma rubrica simples para avaliar um projeto de robótica em equipe."><span aria-hidden="true">✓</span> Rubrica de avaliação</button>
+                        <button class="suggestion-chip is-teacher" type="button" data-prompt="Sou professor(a). Sugira uma organização equilibrada de funções para equipes em um projeto maker."><span aria-hidden="true">◫</span> Organizar equipes</button>
+                    </div>
+                </section>
                 <label class="sr-only" for="message-input">Mensagem para o Sparky</label>
                 <div class="input-wrap">
                     <textarea id="message-input" rows="1" maxlength="1500" placeholder="Pergunte sobre montagem, sensores, programação ou planos de aula…" disabled></textarea>

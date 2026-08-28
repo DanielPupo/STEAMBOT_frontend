@@ -49,7 +49,9 @@
             messageCount: document.getElementById('message-count'),
             sessionTime: document.getElementById('session-time'),
             sessionLabel: document.getElementById('session-label'),
-            toastRegion: document.getElementById('toast-region')
+            toastRegion: document.getElementById('toast-region'),
+            audienceButtons: document.querySelectorAll('[data-audience]'),
+            suggestionGroups: document.querySelectorAll('[data-suggestion-group]')
         });
 
         bindEvents();
@@ -80,6 +82,10 @@
 
         document.querySelectorAll('[data-prompt]').forEach((button) => {
             button.addEventListener('click', () => selectPrompt(button.dataset.prompt));
+        });
+
+        elements.audienceButtons.forEach((button) => {
+            button.addEventListener('click', () => selectAudience(button.dataset.audience));
         });
 
         document.querySelector('.brand').addEventListener('click', (event) => {
@@ -284,6 +290,18 @@
             elements.messageInput.focus();
         }
         updateControls();
+    }
+
+    function selectAudience(audience) {
+        elements.audienceButtons.forEach((button) => {
+            const isActive = button.dataset.audience === audience;
+            button.classList.toggle('is-active', isActive);
+            button.setAttribute('aria-pressed', String(isActive));
+        });
+
+        elements.suggestionGroups.forEach((group) => {
+            group.hidden = group.dataset.suggestionGroup !== audience;
+        });
     }
 
     function addMessage(sender, text) {
