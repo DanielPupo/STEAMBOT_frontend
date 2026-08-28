@@ -11,7 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body data-role="student">
     <a class="skip-link" href="#message-input">Ir para a conversa</a>
 
     <main class="app-shell">
@@ -23,9 +23,10 @@
                 </a>
 
                 <section class="intro-card" aria-labelledby="intro-title">
-                    <span class="eyebrow">Seu copiloto maker</span>
-                    <h2 id="intro-title">Construa, programe e aprenda.</h2>
-                    <p>Orientação prática para alunos e professores, do primeiro bloco ao robô em movimento.</p>
+                    <div id="profile-mascot" class="profile-mascot" aria-hidden="true">🤖</div>
+                    <span id="profile-eyebrow" class="eyebrow">Área do aluno</span>
+                    <h2 id="intro-title">Bora criar algo incrível?</h2>
+                    <p id="profile-description">Complete missões, ganhe XP e aprenda robótica construindo.</p>
                 </section>
 
                 <section class="session-panel" aria-labelledby="session-title">
@@ -36,6 +37,11 @@
                     <div class="stats-grid">
                         <article class="stat-card"><span>Mensagens</span><strong id="message-count">0</strong></article>
                         <article class="stat-card"><span>Tempo</span><strong id="session-time">00:00</strong></article>
+                    </div>
+                    <div id="student-progress" class="student-progress" aria-label="Progresso de experiência">
+                        <div><span>XP da sessão</span><strong id="xp-count">0 XP</strong></div>
+                        <div class="xp-track" aria-hidden="true"><span id="xp-bar"></span></div>
+                        <small id="xp-message">Comece uma missão para ganhar XP.</small>
                     </div>
                 </section>
             </div>
@@ -52,7 +58,7 @@
 
         <section class="workspace" aria-labelledby="chat-title">
             <header class="workspace-header">
-                <div><span class="eyebrow">Laboratório virtual</span><h1 id="chat-title">Converse com o Sparky</h1></div>
+                <div><span id="workspace-eyebrow" class="eyebrow">Laboratório de missões</span><h1 id="chat-title">Converse com o Sparky</h1></div>
                 <div id="connection-status" class="connection-badge is-offline" role="status" aria-live="polite">
                     <span class="status-dot" aria-hidden="true"></span><span class="status-label">Aguardando início</span>
                 </div>
@@ -61,18 +67,29 @@
             <div class="chat-body">
                 <section class="quick-start" id="quick-start" aria-labelledby="quick-title">
                     <div class="section-heading quick-heading">
-                        <div><span class="eyebrow">Comece por aqui</span><h2 id="quick-title">O que você quer explorar hoje?</h2></div>
+                        <div><span id="quick-eyebrow" class="eyebrow">Escolha uma missão</span><h2 id="quick-title">O que vamos construir hoje?</h2></div>
                         <span class="quick-hint">Clique para preparar a pergunta</span>
                     </div>
-                    <div class="prompt-grid">
+                    <div class="prompt-grid" data-role-content="student">
                         <button class="prompt-card" type="button" data-prompt="Sou aluno(a) e quero criar meu primeiro projeto de robótica. Por onde começo?">
                             <span class="prompt-icon is-yellow" aria-hidden="true">⚙</span><span><strong>Primeiro projeto</strong><small>Monte uma trilha de aprendizagem</small></span><span class="prompt-arrow" aria-hidden="true">→</span>
                         </button>
                         <button class="prompt-card" type="button" data-prompt="Explique de forma simples como sensores funcionam em um robô.">
                             <span class="prompt-icon is-cyan" aria-hidden="true">◉</span><span><strong>Sensores</strong><small>Entenda entradas e respostas</small></span><span class="prompt-arrow" aria-hidden="true">→</span>
                         </button>
-                        <button class="prompt-card" type="button" data-prompt="Sou professor(a). Crie uma ideia de aula maker de 50 minutos para minha turma.">
-                            <span class="prompt-icon is-violet" aria-hidden="true">✦</span><span><strong>Plano de aula</strong><small>Atividade maker em 50 minutos</small></span><span class="prompt-arrow" aria-hidden="true">→</span>
+                        <button class="prompt-card" type="button" data-prompt="Sou aluno(a). Crie uma missão curta de programação em blocos com uma conquista no final.">
+                            <span class="prompt-icon is-violet" aria-hidden="true">✦</span><span><strong>Missão relâmpago</strong><small>Programe e desbloqueie uma conquista</small></span><span class="prompt-arrow" aria-hidden="true">→</span>
+                        </button>
+                    </div>
+                    <div class="prompt-grid" data-role-content="teacher" hidden>
+                        <button class="prompt-card" type="button" data-prompt="Crie um plano de aula maker de 50 minutos com objetivo, materiais e etapas.">
+                            <span class="prompt-icon is-cyan" aria-hidden="true">▤</span><span><strong>Plano de aula</strong><small>Estrutura pronta para aplicar</small></span><span class="prompt-arrow" aria-hidden="true">→</span>
+                        </button>
+                        <button class="prompt-card" type="button" data-prompt="Crie uma rubrica simples para avaliar um projeto de robótica em equipe.">
+                            <span class="prompt-icon is-violet" aria-hidden="true">✓</span><span><strong>Rubrica</strong><small>Critérios claros de avaliação</small></span><span class="prompt-arrow" aria-hidden="true">→</span>
+                        </button>
+                        <button class="prompt-card" type="button" data-prompt="Sugira como organizar funções e responsabilidades em equipes de um projeto maker.">
+                            <span class="prompt-icon is-yellow" aria-hidden="true">◫</span><span><strong>Organizar equipes</strong><small>Distribua funções com equilíbrio</small></span><span class="prompt-arrow" aria-hidden="true">→</span>
                         </button>
                     </div>
                 </section>
@@ -87,12 +104,8 @@
                 <section class="composer-tools" aria-labelledby="suggestions-title">
                     <div class="composer-tools-heading">
                         <div>
-                            <span class="eyebrow">Atalhos inteligentes</span>
-                            <strong id="suggestions-title">Escolha seu perfil e comece mais rápido</strong>
-                        </div>
-                        <div class="audience-switch" role="group" aria-label="Perfil das sugestões">
-                            <button class="audience-tab is-active" type="button" data-audience="student" aria-pressed="true">Aluno</button>
-                            <button class="audience-tab" type="button" data-audience="teacher" aria-pressed="false">Professor</button>
+                            <span id="suggestions-eyebrow" class="eyebrow">Próximos desafios</span>
+                            <strong id="suggestions-title">Continue aprendendo com um atalho</strong>
                         </div>
                     </div>
                     <div class="suggestion-chips" data-suggestion-group="student">
@@ -108,7 +121,7 @@
                 </section>
                 <label class="sr-only" for="message-input">Mensagem para o Sparky</label>
                 <div class="input-wrap">
-                    <textarea id="message-input" rows="1" maxlength="1500" placeholder="Pergunte sobre montagem, sensores, programação ou planos de aula…" disabled></textarea>
+                    <textarea id="message-input" rows="1" maxlength="1500" placeholder="Pergunte sobre montagem, sensores, programação ou robótica…" disabled></textarea>
                     <span id="char-counter" aria-live="polite">0 / 1500</span>
                 </div>
                 <button id="send-button" class="send-button" type="button" disabled aria-label="Enviar mensagem"><span>Enviar</span><span aria-hidden="true">↗</span></button>
