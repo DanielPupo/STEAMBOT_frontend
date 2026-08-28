@@ -24,11 +24,17 @@
 *, *::before, *::after { box-sizing: border-box; }
 * { margin: 0; }
 
-html { color-scheme: dark; }
+html {
+  height: 100%;
+  overflow: hidden;
+  color-scheme: dark;
+}
 
 body {
   min-width: 320px;
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
   padding: 24px;
   color: var(--text);
   background:
@@ -78,7 +84,9 @@ button:focus-visible, textarea:focus-visible, a:focus-visible {
   display: grid;
   grid-template-columns: 310px minmax(0, 1fr);
   width: min(1440px, 100%);
-  min-height: calc(100vh - 48px);
+  height: calc(100vh - 48px);
+  height: calc(100dvh - 48px);
+  min-height: 0;
   margin: 0 auto;
   overflow: hidden;
   border: 1px solid var(--line);
@@ -93,7 +101,9 @@ button:focus-visible, textarea:focus-visible, a:focus-visible {
   flex-direction: column;
   justify-content: space-between;
   gap: 32px;
+  min-height: 0;
   padding: 30px;
+  overflow-y: auto;
   border-right: 1px solid var(--line);
   background: linear-gradient(180deg, rgba(18, 33, 54, 0.95), rgba(10, 22, 38, 0.96));
 }
@@ -203,7 +213,7 @@ button:focus-visible, textarea:focus-visible, a:focus-visible {
 .button-danger { border-color: rgba(255, 113, 133, 0.18); color: #ff9aaa; background: rgba(255, 113, 133, 0.07); }
 .button-danger:hover:not(:disabled) { background: rgba(255, 113, 133, 0.13); }
 
-.workspace { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; min-width: 0; min-height: 0; }
+.workspace { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; min-width: 0; min-height: 0; overflow: hidden; }
 .workspace-header { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 26px 32px; border-bottom: 1px solid var(--line); }
 .workspace-header h1 { margin-top: 5px; font: 700 22px "Space Grotesk", sans-serif; }
 
@@ -215,7 +225,7 @@ button:focus-visible, textarea:focus-visible, a:focus-visible {
 
 @keyframes pulse { 50% { opacity: 0.35; transform: scale(0.8); } }
 
-.chat-body { min-height: 0; overflow-y: auto; scrollbar-color: var(--line-strong) transparent; }
+.chat-body { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; min-height: 0; overflow: hidden; }
 .quick-start { padding: 30px 32px 24px; }
 .quick-heading h2 { margin-top: 6px; font: 700 19px "Space Grotesk", sans-serif; }
 .quick-hint { text-align: right; }
@@ -248,7 +258,10 @@ button:focus-visible, textarea:focus-visible, a:focus-visible {
 .prompt-arrow { color: var(--muted); transition: transform var(--transition), color var(--transition); }
 .prompt-card:hover .prompt-arrow { color: var(--yellow); transform: translateX(3px); }
 
-.chat-box { display: flex; flex-direction: column; gap: 18px; padding: 8px 32px 24px; }
+.chat-box { display: flex; flex-direction: column; gap: 18px; min-height: 0; padding: 8px 32px 24px; overflow-y: auto; overscroll-behavior: contain; scrollbar-color: var(--line-strong) transparent; }
+.chat-box::-webkit-scrollbar { width: 7px; }
+.chat-box::-webkit-scrollbar-track { background: transparent; }
+.chat-box::-webkit-scrollbar-thumb { border-radius: 999px; background: var(--line-strong); }
 .message { display: grid; grid-template-columns: 34px minmax(0, 1fr); align-items: start; gap: 10px; width: min(78%, 760px); animation: message-in 220ms ease-out; }
 .message.is-user { align-self: flex-end; grid-template-columns: minmax(0, 1fr) 34px; }
 .message.is-system { align-self: center; display: block; width: auto; max-width: 90%; }
@@ -298,7 +311,7 @@ button:focus-visible, textarea:focus-visible, a:focus-visible {
 
 @media (max-width: 1080px) {
   body { padding: 14px; }
-  .app-shell { grid-template-columns: 250px minmax(0, 1fr); min-height: calc(100vh - 28px); }
+  .app-shell { grid-template-columns: 250px minmax(0, 1fr); height: calc(100vh - 28px); height: calc(100dvh - 28px); min-height: 0; }
   .sidebar { padding: 24px 20px; }
   .intro-card { padding: 19px; }
   .prompt-grid { grid-template-columns: 1fr; }
@@ -307,8 +320,8 @@ button:focus-visible, textarea:focus-visible, a:focus-visible {
 
 @media (max-width: 760px) {
   body { padding: 0; }
-  .app-shell { display: flex; flex-direction: column; min-height: 100vh; border: 0; border-radius: 0; }
-  .sidebar { display: block; padding: 18px; border-right: 0; border-bottom: 1px solid var(--line); }
+  .app-shell { display: flex; flex-direction: column; height: 100vh; height: 100dvh; min-height: 0; border: 0; border-radius: 0; }
+  .sidebar { display: block; flex: 0 0 auto; padding: 18px; overflow: visible; border-right: 0; border-bottom: 1px solid var(--line); }
   .intro-card, .session-panel { display: none; }
   .sidebar-actions { margin-top: 16px; grid-template-columns: 1fr auto; }
   .secondary-actions { display: none; }
