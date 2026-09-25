@@ -1,126 +1,854 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Sparky, o tutor virtual de robótica e cultura maker da plataforma STEAM+.">
-    <meta name="theme-color" content="#08111f">
-    <title>Sparky | Laboratório Virtual STEAM+</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="description"
+        content="Sparky, tutor virtual de robótica e cultura maker da plataforma STEAM+."
+    >
+
+    <meta
+        name="theme-color"
+        content="#08111f"
+    >
+
+    <title>
+        Sparky | Laboratório Virtual STEAM+
+    </title>
+
+    <link
+        rel="preconnect"
+        href="https://fonts.googleapis.com"
+    >
+
+    <link
+        rel="preconnect"
+        href="https://fonts.gstatic.com"
+        crossorigin
+    >
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap"
+        rel="stylesheet"
+    >
+
+    <link
+        rel="stylesheet"
+        href="style.css"
+    >
 </head>
+
 <body>
-    <a class="skip-link" href="#message-input">Ir para a conversa</a>
+
+    <a
+        class="skip-link"
+        href="#message-input"
+    >
+        Ir para a conversa
+    </a>
 
     <main class="app-shell">
-        <aside class="sidebar" aria-label="Painel da sessão">
+
+        <!-- ================================================================
+             Sidebar
+             ================================================================ -->
+
+        <aside
+            class="sidebar"
+            aria-label="Painel da sessão"
+        >
+
             <div>
-                <a class="brand" href="#" aria-label="STEAM+ Hub — início">
-                    <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
-                    <span><strong>STEAM<span>+</span> HUB</strong><small>Robótica & Cultura Maker</small></span>
+
+                <!-- Marca -->
+                <a
+                    class="brand"
+                    href="#"
+                    aria-label="STEAM+ Hub — início"
+                >
+
+                    <span
+                        class="brand-mark"
+                        aria-hidden="true"
+                    >
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </span>
+
+                    <span>
+                        <strong>
+                            STEAM<span>+</span> HUB
+                        </strong>
+
+                        <small>
+                            Robótica & Cultura Maker
+                        </small>
+                    </span>
+
                 </a>
 
-                <section class="intro-card" aria-labelledby="intro-title">
-                    <span class="eyebrow">Seu copiloto maker</span>
-                    <h2 id="intro-title">Construa, programe e aprenda.</h2>
-                    <p>Orientação prática para alunos e professores, do primeiro bloco ao robô em movimento.</p>
+                <!-- Introdução -->
+                <section
+                    class="intro-card"
+                    aria-labelledby="intro-title"
+                >
+
+                    <span class="eyebrow">
+                        Seu copiloto maker
+                    </span>
+
+                    <h2 id="intro-title">
+                        Construa, programe e aprenda.
+                    </h2>
+
+                    <p>
+                        Orientação prática para alunos e professores,
+                        do primeiro bloco ao robô em movimento.
+                    </p>
+
                 </section>
 
-                <section class="session-panel" aria-labelledby="session-title">
+                <!-- Perfil -->
+                <section
+                    class="profile-panel"
+                    aria-labelledby="profile-title"
+                >
+
                     <div class="section-heading">
-                        <h2 id="session-title">Sessão atual</h2>
-                        <span id="session-label">Não iniciada</span>
+
+                        <h2 id="profile-title">
+                            Perfil
+                        </h2>
+
+                        <span id="profile-label">
+                            Não definido
+                        </span>
+
                     </div>
-                    <div class="stats-grid">
-                        <article class="stat-card"><span>Mensagens</span><strong id="message-count">0</strong></article>
-                        <article class="stat-card"><span>Tempo</span><strong id="session-time">00:00</strong></article>
+
+                    <div
+                        class="profile-switch"
+                        role="group"
+                        aria-label="Escolha o perfil de uso"
+                    >
+
+                        <button
+                            class="profile-button"
+                            type="button"
+                            data-profile="student"
+                            aria-pressed="false"
+                        >
+                            Aluno
+                        </button>
+
+                        <button
+                            class="profile-button"
+                            type="button"
+                            data-profile="teacher"
+                            aria-pressed="false"
+                        >
+                            Professor
+                        </button>
+
                     </div>
+
+                    <p class="profile-help">
+                        O perfil adapta as sugestões e o contexto do Sparky.
+                    </p>
+
                 </section>
+
+                <!-- Sessão -->
+                <section
+                    class="session-panel"
+                    aria-labelledby="session-title"
+                >
+
+                    <div class="section-heading">
+
+                        <h2 id="session-title">
+                            Sessão atual
+                        </h2>
+
+                        <span id="session-label">
+                            Não iniciada
+                        </span>
+
+                    </div>
+
+                    <div class="stats-grid">
+
+                        <article class="stat-card">
+
+                            <span>
+                                Mensagens
+                            </span>
+
+                            <strong id="message-count">
+                                0
+                            </strong>
+
+                        </article>
+
+                        <article class="stat-card">
+
+                            <span>
+                                Tempo
+                            </span>
+
+                            <strong id="session-time">
+                                00:00
+                            </strong>
+
+                        </article>
+
+                    </div>
+
+                </section>
+
             </div>
 
+            <!-- Ações -->
             <div class="sidebar-actions">
-                <button id="iniciarBtn" class="button button-primary" type="button"><span class="button-icon" aria-hidden="true">▶</span><span>Iniciar Sparky</span></button>
+
+                <button
+                    id="iniciarBtn"
+                    class="button button-primary"
+                    type="button"
+                    disabled
+                >
+
+                    <span
+                        class="button-icon"
+                        aria-hidden="true"
+                    >
+                        ▶
+                    </span>
+
+                    <span>
+                        Iniciar Sparky
+                    </span>
+
+                </button>
+
                 <div class="secondary-actions">
-                    <button id="novaConversaBtn" class="button button-secondary" type="button" disabled>Nova conversa</button>
-                    <button id="limparBtn" class="button button-secondary" type="button">Limpar tela</button>
+
+                    <button
+                        id="novaConversaBtn"
+                        class="button button-secondary"
+                        type="button"
+                        disabled
+                    >
+                        Nova conversa
+                    </button>
+
+                    <button
+                        id="limparBtn"
+                        class="button button-secondary"
+                        type="button"
+                    >
+                        Limpar tela
+                    </button>
+
                 </div>
-                <button id="encerrarBtn" class="button button-danger" type="button" disabled>Desconectar</button>
+
+                <button
+                    id="encerrarBtn"
+                    class="button button-danger"
+                    type="button"
+                    disabled
+                >
+                    Desconectar
+                </button>
+
             </div>
+
         </aside>
 
-        <section class="workspace" aria-labelledby="chat-title">
+        <!-- ================================================================
+             Área principal
+             ================================================================ -->
+
+        <section
+            class="workspace"
+            aria-labelledby="chat-title"
+        >
+
+            <!-- Cabeçalho -->
             <header class="workspace-header">
-                <div><span class="eyebrow">Laboratório virtual</span><h1 id="chat-title">Converse com o Sparky</h1></div>
-                <div id="connection-status" class="connection-badge is-offline" role="status" aria-live="polite">
-                    <span class="status-dot" aria-hidden="true"></span><span class="status-label">Aguardando início</span>
+
+                <div>
+
+                    <span class="eyebrow">
+                        Laboratório virtual
+                    </span>
+
+                    <h1 id="chat-title">
+                        Converse com o Sparky
+                    </h1>
+
                 </div>
+
+                <div>
+
+                    <span
+                        id="active-profile-chip"
+                        class="active-profile-chip"
+                    >
+                        Escolha um perfil
+                    </span>
+
+                </div>
+
+                <div
+                    id="connection-status"
+                    class="connection-badge is-offline"
+                    role="status"
+                    aria-live="polite"
+                >
+
+                    <span
+                        class="status-dot"
+                        aria-hidden="true"
+                    ></span>
+
+                    <span class="status-label">
+                        Aguardando início
+                    </span>
+
+                </div>
+
             </header>
 
+            <!-- ============================================================
+                 Conversa
+                 ============================================================ -->
+
             <div class="chat-body">
-                <section class="quick-start" id="quick-start" aria-labelledby="quick-title">
+
+                <!-- Sugestões iniciais -->
+                <section
+                    class="quick-start"
+                    id="quick-start"
+                    aria-labelledby="quick-title"
+                >
+
                     <div class="section-heading quick-heading">
-                        <div><span class="eyebrow">Comece por aqui</span><h2 id="quick-title">O que você quer explorar hoje?</h2></div>
-                        <span class="quick-hint">Clique para preparar a pergunta</span>
+
+                        <div>
+
+                            <span class="eyebrow">
+                                Comece por aqui
+                            </span>
+
+                            <h2 id="quick-title">
+                                O que você quer explorar hoje?
+                            </h2>
+
+                        </div>
+
+                        <span class="quick-hint">
+                            Escolha uma sugestão
+                        </span>
+
                     </div>
-                    <div class="prompt-grid">
-                        <button class="prompt-card" type="button" data-prompt="Sou aluno(a) e quero criar meu primeiro projeto de robótica. Por onde começo?">
-                            <span class="prompt-icon is-yellow" aria-hidden="true">⚙</span><span><strong>Primeiro projeto</strong><small>Monte uma trilha de aprendizagem</small></span><span class="prompt-arrow" aria-hidden="true">→</span>
+
+                    <!-- ====================================================
+                         Sugestões para aluno
+                         ==================================================== -->
+
+                    <div
+                        class="prompt-grid"
+                        data-quick-prompts="student"
+                    >
+
+                        <button
+                            class="prompt-card"
+                            type="button"
+                            data-prompt="Quero criar meu primeiro projeto de robótica. Por onde começo?"
+                        >
+
+                            <span
+                                class="prompt-icon is-yellow"
+                                aria-hidden="true"
+                            >
+                                ⚙
+                            </span>
+
+                            <span>
+
+                                <strong>
+                                    Primeiro projeto
+                                </strong>
+
+                                <small>
+                                    Monte uma trilha de aprendizagem
+                                </small>
+
+                            </span>
+
+                            <span
+                                class="prompt-arrow"
+                                aria-hidden="true"
+                            >
+                                →
+                            </span>
+
                         </button>
-                        <button class="prompt-card" type="button" data-prompt="Explique de forma simples como sensores funcionam em um robô.">
-                            <span class="prompt-icon is-cyan" aria-hidden="true">◉</span><span><strong>Sensores</strong><small>Entenda entradas e respostas</small></span><span class="prompt-arrow" aria-hidden="true">→</span>
+
+                        <button
+                            class="prompt-card"
+                            type="button"
+                            data-prompt="Explique de forma simples como sensores funcionam em um robô."
+                        >
+
+                            <span
+                                class="prompt-icon is-cyan"
+                                aria-hidden="true"
+                            >
+                                ◉
+                            </span>
+
+                            <span>
+
+                                <strong>
+                                    Sensores
+                                </strong>
+
+                                <small>
+                                    Entenda entradas e respostas
+                                </small>
+
+                            </span>
+
+                            <span
+                                class="prompt-arrow"
+                                aria-hidden="true"
+                            >
+                                →
+                            </span>
+
                         </button>
-                        <button class="prompt-card" type="button" data-prompt="Sou professor(a). Crie uma ideia de aula maker de 50 minutos para minha turma.">
-                            <span class="prompt-icon is-violet" aria-hidden="true">✦</span><span><strong>Plano de aula</strong><small>Atividade maker em 50 minutos</small></span><span class="prompt-arrow" aria-hidden="true">→</span>
+
+                        <button
+                            class="prompt-card"
+                            type="button"
+                            data-prompt="Crie um desafio rápido de robótica para eu praticar agora."
+                        >
+
+                            <span
+                                class="prompt-icon is-violet"
+                                aria-hidden="true"
+                            >
+                                ✦
+                            </span>
+
+                            <span>
+
+                                <strong>
+                                    Desafio rápido
+                                </strong>
+
+                                <small>
+                                    Pratique com uma missão curta
+                                </small>
+
+                            </span>
+
+                            <span
+                                class="prompt-arrow"
+                                aria-hidden="true"
+                            >
+                                →
+                            </span>
+
                         </button>
+
                     </div>
+
+                    <!-- ====================================================
+                         Sugestões para professor
+                         ==================================================== -->
+
+                    <div
+                        class="prompt-grid"
+                        data-quick-prompts="teacher"
+                        hidden
+                    >
+
+                        <button
+                            class="prompt-card"
+                            type="button"
+                            data-prompt="Crie uma ideia de aula maker de 50 minutos para minha turma."
+                        >
+
+                            <span
+                                class="prompt-icon is-violet"
+                                aria-hidden="true"
+                            >
+                                ✦
+                            </span>
+
+                            <span>
+
+                                <strong>
+                                    Plano de aula
+                                </strong>
+
+                                <small>
+                                    Atividade maker em 50 minutos
+                                </small>
+
+                            </span>
+
+                            <span
+                                class="prompt-arrow"
+                                aria-hidden="true"
+                            >
+                                →
+                            </span>
+
+                        </button>
+
+                        <button
+                            class="prompt-card"
+                            type="button"
+                            data-prompt="Crie uma rubrica simples para avaliar um projeto de robótica."
+                        >
+
+                            <span
+                                class="prompt-icon is-cyan"
+                                aria-hidden="true"
+                            >
+                                ✓
+                            </span>
+
+                            <span>
+
+                                <strong>
+                                    Rubrica
+                                </strong>
+
+                                <small>
+                                    Organize critérios de avaliação
+                                </small>
+
+                            </span>
+
+                            <span
+                                class="prompt-arrow"
+                                aria-hidden="true"
+                            >
+                                →
+                            </span>
+
+                        </button>
+
+                        <button
+                            class="prompt-card"
+                            type="button"
+                            data-prompt="Sugira uma divisão equilibrada de funções para equipes em um projeto maker."
+                        >
+
+                            <span
+                                class="prompt-icon is-yellow"
+                                aria-hidden="true"
+                            >
+                                ◫
+                            </span>
+
+                            <span>
+
+                                <strong>
+                                    Organizar equipes
+                                </strong>
+
+                                <small>
+                                    Distribua funções de forma equilibrada
+                                </small>
+
+                            </span>
+
+                            <span
+                                class="prompt-arrow"
+                                aria-hidden="true"
+                            >
+                                →
+                            </span>
+
+                        </button>
+
+                    </div>
+
                 </section>
 
-                <div id="chat-box" class="chat-box" role="log" aria-live="polite" aria-relevant="additions"></div>
-                <div id="typing-indicator" class="typing-indicator" hidden aria-live="polite">
-                    <span class="avatar" aria-hidden="true">S+</span><span class="typing-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>Sparky está organizando a resposta…</span>
+                <!-- Histórico visual -->
+                <div
+                    id="chat-box"
+                    class="chat-box"
+                    role="log"
+                    aria-live="polite"
+                    aria-relevant="additions"
+                ></div>
+
+                <!-- Indicador de digitação -->
+                <div
+                    id="typing-indicator"
+                    class="typing-indicator"
+                    hidden
+                    aria-live="polite"
+                >
+
+                    <span
+                        class="avatar"
+                        aria-hidden="true"
+                    >
+                        S+
+                    </span>
+
+                    <span
+                        class="typing-dots"
+                        aria-hidden="true"
+                    >
+                        <i></i>
+                        <i></i>
+                        <i></i>
+                    </span>
+
+                    <span>
+                        Sparky está organizando a resposta…
+                    </span>
+
                 </div>
+
             </div>
 
+            <!-- ============================================================
+                 Campo de mensagem
+                 ============================================================ -->
+
             <footer class="composer">
-                <section class="composer-tools" aria-labelledby="suggestions-title">
+
+                <!-- Sugestões rápidas -->
+                <section
+                    class="composer-tools"
+                    aria-labelledby="suggestions-title"
+                >
+
                     <div class="composer-tools-heading">
+
                         <div>
-                            <span class="eyebrow">Atalhos inteligentes</span>
-                            <strong id="suggestions-title">Escolha seu perfil e comece mais rápido</strong>
+
+                            <span class="eyebrow">
+                                Atalhos inteligentes
+                            </span>
+
+                            <strong id="suggestions-title">
+                                Sugestões para seu perfil
+                            </strong>
+
                         </div>
-                        <div class="audience-switch" role="group" aria-label="Perfil das sugestões">
-                            <button class="audience-tab is-active" type="button" data-audience="student" aria-pressed="true">Aluno</button>
-                            <button class="audience-tab" type="button" data-audience="teacher" aria-pressed="false">Professor</button>
-                        </div>
+
                     </div>
-                    <div class="suggestion-chips" data-suggestion-group="student">
-                        <button class="suggestion-chip is-student" type="button" data-prompt="Sou aluno(a). Crie um desafio rápido de robótica que eu consiga começar em 5 minutos."><span aria-hidden="true">🚀</span> Desafio de 5 minutos</button>
-                        <button class="suggestion-chip is-student" type="button" data-prompt="Sou aluno(a). Ajude-me a fazer meu primeiro robô se movimentar, com passos simples."><span aria-hidden="true">⚙️</span> Fazer o robô andar</button>
-                        <button class="suggestion-chip is-student" type="button" data-prompt="Sou aluno(a). Transforme o conteúdo de sensores em uma missão curta com XP e conquista."><span aria-hidden="true">🏅</span> Missão com XP</button>
+
+                    <!-- Aluno -->
+                    <div
+                        class="suggestion-chips"
+                        data-suggestion-group="student"
+                        hidden
+                    >
+
+                        <button
+                            class="suggestion-chip is-student"
+                            type="button"
+                            data-prompt="Crie um desafio rápido de robótica que eu consiga começar em 5 minutos."
+                        >
+
+                            <span aria-hidden="true">
+                                🚀
+                            </span>
+
+                            Desafio de 5 minutos
+
+                        </button>
+
+                        <button
+                            class="suggestion-chip is-student"
+                            type="button"
+                            data-prompt="Ajude-me a fazer meu primeiro robô se movimentar, com passos simples."
+                        >
+
+                            <span aria-hidden="true">
+                                ⚙️
+                            </span>
+
+                            Fazer o robô andar
+
+                        </button>
+
+                        <button
+                            class="suggestion-chip is-student"
+                            type="button"
+                            data-prompt="Transforme o conteúdo de sensores em uma missão curta com XP e conquista."
+                        >
+
+                            <span aria-hidden="true">
+                                🏅
+                            </span>
+
+                            Missão com XP
+
+                        </button>
+
                     </div>
-                    <div class="suggestion-chips" data-suggestion-group="teacher" hidden>
-                        <button class="suggestion-chip is-teacher" type="button" data-prompt="Sou professor(a). Crie um plano de aula maker de 50 minutos, com objetivo, materiais e etapas."><span aria-hidden="true">▤</span> Plano de aula</button>
-                        <button class="suggestion-chip is-teacher" type="button" data-prompt="Sou professor(a). Crie uma rubrica simples para avaliar um projeto de robótica em equipe."><span aria-hidden="true">✓</span> Rubrica de avaliação</button>
-                        <button class="suggestion-chip is-teacher" type="button" data-prompt="Sou professor(a). Sugira uma organização equilibrada de funções para equipes em um projeto maker."><span aria-hidden="true">◫</span> Organizar equipes</button>
+
+                    <!-- Professor -->
+                    <div
+                        class="suggestion-chips"
+                        data-suggestion-group="teacher"
+                        hidden
+                    >
+
+                        <button
+                            class="suggestion-chip is-teacher"
+                            type="button"
+                            data-prompt="Crie um plano de aula maker de 50 minutos, com objetivo, materiais e etapas."
+                        >
+
+                            <span aria-hidden="true">
+                                ▤
+                            </span>
+
+                            Plano de aula
+
+                        </button>
+
+                        <button
+                            class="suggestion-chip is-teacher"
+                            type="button"
+                            data-prompt="Crie uma rubrica simples para avaliar um projeto de robótica em equipe."
+                        >
+
+                            <span aria-hidden="true">
+                                ✓
+                            </span>
+
+                            Rubrica de avaliação
+
+                        </button>
+
+                        <button
+                            class="suggestion-chip is-teacher"
+                            type="button"
+                            data-prompt="Sugira uma organização equilibrada de funções para equipes em um projeto maker."
+                        >
+
+                            <span aria-hidden="true">
+                                ◫
+                            </span>
+
+                            Organizar equipes
+
+                        </button>
+
                     </div>
+
                 </section>
-                <label class="sr-only" for="message-input">Mensagem para o Sparky</label>
+
+                <!-- Campo -->
+                <label
+                    class="sr-only"
+                    for="message-input"
+                >
+                    Mensagem para o Sparky
+                </label>
+
                 <div class="input-wrap">
-                    <textarea id="message-input" rows="1" maxlength="1500" placeholder="Pergunte sobre montagem, sensores, programação ou planos de aula…" disabled></textarea>
-                    <span id="char-counter" aria-live="polite">0 / 1500</span>
+
+                    <textarea
+                        id="message-input"
+                        rows="1"
+                        maxlength="1500"
+                        placeholder="Escolha um perfil e inicie o Sparky…"
+                        disabled
+                    ></textarea>
+
+                    <span
+                        id="char-counter"
+                        aria-live="polite"
+                    >
+                        0 / 1500
+                    </span>
+
                 </div>
-                <button id="send-button" class="send-button" type="button" disabled aria-label="Enviar mensagem"><span>Enviar</span><span aria-hidden="true">↗</span></button>
-                <p class="composer-note">Enter para enviar · Shift + Enter para quebrar a linha</p>
+
+                <!-- Enviar -->
+                <button
+                    id="send-button"
+                    class="send-button"
+                    type="button"
+                    disabled
+                    aria-label="Enviar mensagem"
+                >
+
+                    <span>
+                        Enviar
+                    </span>
+
+                    <span aria-hidden="true">
+                        ↗
+                    </span>
+
+                </button>
+
+                <p class="composer-note">
+                    Enter para enviar · Shift + Enter para quebrar a linha
+                </p>
+
             </footer>
+
         </section>
+
     </main>
 
-    <div id="toast-region" class="toast-region" aria-live="assertive" aria-atomic="true"></div>
-    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+    <!-- ================================================================
+         Toasts
+         ================================================================ -->
+
+    <div
+        id="toast-region"
+        class="toast-region"
+        aria-live="assertive"
+        aria-atomic="true"
+    ></div>
+
+    <!-- ================================================================
+         Dependências
+         ================================================================ -->
+
+    <script
+        src="https://cdn.socket.io/4.7.5/socket.io.min.js"
+    ></script>
+
+    <script
+        src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"
+    ></script>
+
+    <script
+        src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"
+    ></script>
+
     <script src="script.js"></script>
+
 </body>
+
 </html>
