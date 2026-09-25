@@ -1337,4 +1337,343 @@ a:focus-visible {
   .active-profile-chip {
     min-height: 28px;
   }
+
+  /* ==========================================================================
+   FOCO PRINCIPAL: ÁREA DE CONVERSA
+   ========================================================================== */
+
+/*
+ * A conversa deve ocupar a maior parte da tela.
+ * Reduzimos elementos secundários e damos mais espaço ao chat.
+ */
+
+.workspace-header {
+  padding: 16px 28px;
+  min-height: 78px;
+}
+
+.workspace-header h1 {
+  font-size: 20px;
+}
+
+.workspace-header .eyebrow {
+  font-size: 9px;
+}
+
+
+/* ==========================================================================
+   SUGESTÕES INICIAIS MAIS COMPACTAS
+   ========================================================================== */
+
+.quick-start {
+  padding: 16px 28px 12px;
+}
+
+.quick-heading h2 {
+  margin-top: 4px;
+  font-size: 17px;
+}
+
+.quick-hint {
+  display: none;
+}
+
+.prompt-grid {
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.prompt-card {
+  min-height: 62px;
+  padding: 10px 12px;
+  gap: 9px;
+  border-radius: 12px;
+}
+
+.prompt-icon {
+  width: 30px;
+  height: 30px;
+  font-size: 13px;
+}
+
+.prompt-card strong {
+  font-size: 10px;
+}
+
+.prompt-card small {
+  margin-top: 2px;
+  font-size: 8px;
+}
+
+
+/* ==========================================================================
+   CHAT — ELEMENTO PRINCIPAL
+   ========================================================================== */
+
+.chat-box {
+  min-height: 0;
+
+  /*
+   * Mais espaço interno para a conversa respirar.
+   */
+  padding: 18px 28px 30px;
+
+  gap: 20px;
+}
+
+/*
+ * As mensagens agora podem ocupar mais largura.
+ */
+.message {
+  width: min(88%, 920px);
+}
+
+.message-card {
+  padding: 16px 18px;
+
+  /*
+   * Texto mais fácil de ler.
+   */
+  font-size: 16px;
+  line-height: 1.7;
+
+  border-radius: 8px 18px 18px 18px;
+}
+
+.is-user .message-card {
+  border-radius: 18px 8px 18px 18px;
+}
+
+/*
+ * Nome + horário têm menos destaque.
+ */
+.message-meta {
+  margin-bottom: 7px;
+  font-size: 8px;
+}
+
+
+/* ==========================================================================
+   INDICADOR DE RESPOSTA
+   ========================================================================== */
+
+.typing-indicator {
+  min-height: 46px;
+  padding: 8px 28px 10px;
+
+  font-size: 11px;
+}
+
+
+/* ==========================================================================
+   ATALHOS INTELIGENTES
+   ========================================================================== */
+
+/*
+ * São úteis, mas não são o foco principal.
+ */
+
+.composer-tools {
+  gap: 5px;
+}
+
+.composer-tools-heading {
+  display: none;
+}
+
+.suggestion-chips {
+  gap: 6px;
+  padding-bottom: 3px;
+}
+
+.suggestion-chip {
+  min-height: 29px;
+
+  padding: 5px 10px;
+
+  font-size: 9px;
+}
+
+
+/* ==========================================================================
+   ÁREA DE DIGITAÇÃO
+   ========================================================================== */
+
+.composer {
+  padding: 10px 28px 18px;
+
+  gap: 9px;
+}
+
+#message-input {
+  min-height: 60px;
+
+  max-height: 170px;
+
+  padding:
+    17px
+    82px
+    15px
+    17px;
+
+  font-size: 15px;
+
+  border-radius: 16px;
+}
+
+.send-button {
+  height: 60px;
+
+  min-width: 118px;
+
+  border-radius: 16px;
+
+  font-size: 11px;
+}
+
+#char-counter {
+  right: 14px;
+  bottom: 11px;
+}
+
+.composer-note {
+  display: none;
+}
+
+
+/* ==========================================================================
+   BOTÃO COPIAR
+   ========================================================================== */
+
+.message-actions {
+  margin-top: 8px;
+}
+
+.message-action {
+  padding: 4px 7px;
+  font-size: 8px;
+}
+
+
+/* ==========================================================================
+   STATUS E PERFIL
+   ========================================================================== */
+
+.connection-badge {
+  padding: 7px 11px;
+
+  font-size: 9px;
+}
+
+.active-profile-chip {
+  min-height: 26px;
+
+  padding: 4px 10px;
+
+  font-size: 9px;
+}
+
+
+/* ==========================================================================
+   DESKTOP GRANDE
+   ========================================================================== */
+
+@media (min-width: 1200px) {
+
+  /*
+   * Em monitores grandes, damos ainda mais espaço às mensagens.
+   */
+
+  .message {
+    width: min(90%, 980px);
+  }
+
+  .message-card {
+    font-size: 16px;
+  }
+
+}
+
+
+/* ==========================================================================
+   MOBILE
+   ========================================================================== */
+
+@media (max-width: 760px) {
+
+  .workspace-header {
+    min-height: 64px;
+    padding: 12px 16px;
+  }
+
+  .workspace-header h1 {
+    font-size: 17px;
+  }
+
+  /*
+   * Sugestões ficam horizontais para não roubar altura.
+   */
+  .quick-start {
+    padding: 12px 16px 8px;
+  }
+
+  .quick-heading h2 {
+    font-size: 15px;
+  }
+
+  .prompt-grid {
+    display: flex;
+
+    gap: 8px;
+
+    margin-top: 9px;
+
+    overflow-x: auto;
+  }
+
+  .prompt-card {
+    min-width: 200px;
+    min-height: 56px;
+  }
+
+  /*
+   * Chat vira praticamente toda a tela restante.
+   */
+  .chat-box {
+    padding: 12px 16px 22px;
+  }
+
+  .message {
+    width: 96%;
+  }
+
+  .message-card {
+    padding: 13px 14px;
+
+    font-size: 14px;
+  }
+
+  /*
+   * Rodapé bem mais compacto.
+   */
+  .composer {
+    padding: 8px 14px 14px;
+  }
+
+  .suggestion-chip {
+    min-height: 28px;
+  }
+
+  #message-input {
+    min-height: 54px;
+
+    font-size: 14px;
+  }
+
+  .send-button {
+    height: 54px;
+
+    min-width: 54px;
+  }
+}
 }

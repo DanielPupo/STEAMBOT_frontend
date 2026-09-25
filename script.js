@@ -608,11 +608,10 @@
                 );
 
                 showToast(
-                    `Perfil alterado para ${
-                        ROLE_CONFIG[
-                            state.role
-                        ]?.label
-                        || 'novo perfil'
+                    `Perfil alterado para ${ROLE_CONFIG[
+                        state.role
+                    ]?.label
+                    || 'novo perfil'
                     }.`
                 );
             }
@@ -1137,6 +1136,8 @@
             requestId
         );
 
+        elements.quickStart.hidden = true;
+        
         addMessage(
             'user',
             text
@@ -1217,10 +1218,9 @@
         }
 
         return (
-            `msg-${Date.now()}-${
-                Math.random()
-                    .toString(36)
-                    .slice(2, 10)
+            `msg-${Date.now()}-${Math.random()
+                .toString(36)
+                .slice(2, 10)
             }`
         );
     }
@@ -1312,11 +1312,10 @@
             );
 
             pill.className = (
-                `system-pill${
-                    normalizedSender
+                `system-pill${normalizedSender
                     === 'error'
-                        ? ' is-error'
-                        : ''
+                    ? ' is-error'
+                    : ''
                 }`
             );
 
@@ -1493,7 +1492,7 @@
          * as sugestões iniciais desaparecem.
          */
         elements.quickStart.hidden = (
-            state.messageCount > 1
+            state.messageCount > 0
         );
 
         requestAnimationFrame(
@@ -1970,10 +1969,9 @@
         );
 
         toast.className = (
-            `toast${
-                type === 'error'
-                    ? ' is-error'
-                    : ''
+            `toast${type === 'error'
+                ? ' is-error'
+                : ''
             }`
         );
 
