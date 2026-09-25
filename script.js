@@ -30,6 +30,30 @@
         }
     });
 
+    const CLIENT_BLOCKED_PATTERNS = [
+    /\bporn(?:o|ografia|ográfico|ográfica)?\b/i,
+    /\bnudes?\b/i,
+    /\bconteúdo adulto\b/i,
+    /\bconteúdo \+18\b/i,
+    /\bmaior de 18\b/i,
+    /\bsexo explícito\b/i
+];
+
+function containsBlockedContent(text) {
+    if (typeof text !== 'string') {
+        return false;
+    }
+
+    const normalized = text
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase();
+
+    return CLIENT_BLOCKED_PATTERNS.some(
+        (pattern) => pattern.test(normalized)
+    );
+}
+
     // -------------------------------------------------------------------------
     // Estado da interface
     // -------------------------------------------------------------------------
@@ -1121,6 +1145,28 @@
             return;
         }
 
+
+        if (containsBlockedContent(text)) {
+
+    showToast(
+        'Essa mensagem contém conteúdo não permitido na plataforma.',
+        'error'
+    );
+
+    addMessage(
+        'error',
+        'O Sparky aceita apenas conteúdos apropriados para o ambiente educacional.'
+    );
+
+    elements.messageInput.value = '';
+
+    updateCharacterCounter();
+
+    resizeComposer();
+
+    return;
+}
+
         /**
          * Cada mensagem recebe um ID único.
          *
@@ -1137,7 +1183,7 @@
         );
 
         elements.quickStart.hidden = true;
-        
+
         addMessage(
             'user',
             text
