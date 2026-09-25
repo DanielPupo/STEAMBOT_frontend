@@ -1,16 +1,13 @@
 (() => {
     'use strict';
 
-    // -------------------------------------------------------------------------
-    // Configuração
-    // -------------------------------------------------------------------------
-
     const CONFIG = Object.freeze({
         backendUrl:
             window.STEAMBOT_CONFIG?.backendUrl ||
             'https://steambot-backend.onrender.com',
 
         maxMessageLength: 1500,
+
         responseTimeoutMs: 60000,
 
         socketOptions: {
@@ -37,70 +34,59 @@
         }
     });
 
-    // -------------------------------------------------------------------------
-    // Filtro simples do frontend
-    //
-    // IMPORTANTE:
-    // O filtro principal continua sendo o backend.
-    // Este filtro serve apenas para feedback imediato.
-    // -------------------------------------------------------------------------
-
     const CLIENT_BLOCKED_PATTERNS = [
-        /\bporn(?:o|ografia|ográfico|ográfica)?\b/i,
+        /\bporn(?:o|ografia|ografico|ografica)?\b/i,
         /\bnudes?\b/i,
-        /\bconteúdo adulto\b/i,
-        /\bconteúdo \+18\b/i,
+        /\bconteudo adulto\b/i,
+        /\bconteudo \+18\b/i,
         /\bmaior de 18\b/i,
-        /\bsexo explícito\b/i
+        /\bsexo explicito\b/i
     ];
 
-    function containsBlockedContent(text) {
-        if (typeof text !== 'string') {
-            return false;
-        }
+    /*
+     * Domínios autorizados a enviar o perfil
+     * para o chatbot através de postMessage.
+     */
+    const TRUSTED_PARENT_ORIGINS =
+        new Set([
+            'https://frontend-xi-taupe-77.vercel.app',
 
-        const normalized = text
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .toLowerCase();
-
-        return CLIENT_BLOCKED_PATTERNS.some(
-            (pattern) => pattern.test(normalized)
-        );
-    }
-
-    // -------------------------------------------------------------------------
-    // Estado da interface
-    // -------------------------------------------------------------------------
+            'http://localhost:3000',
+            'http://localhost:19006',
+            'http://localhost:8081'
+        ]);
 
     const state = {
         socket: null,
 
         connected: false,
+
         processing: false,
 
         manualDisconnect: false,
+
         connectErrorShown: false,
+
         welcomeShown: false,
 
-        // Perfil
         role: null,
+
         userId: null,
+
         userName: null,
 
-        // Estatísticas
         messageCount: 0,
 
-        // Cronômetro
         sessionStartedAt: null,
+
         timerId: null,
 
-        // Requisição atual
         responseTimeoutId: null,
+
         pendingRequestId: null,
 
-        // IDs que já expiraram.
-        expiredRequestIds: new Set()
+        expiredRequestIds:
+            new Set()
     };
 
     const elements = {};
@@ -110,162 +96,195 @@
         initialize
     );
 
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------------
     // Inicialização
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------------
 
     function initialize() {
         cacheElements();
 
+        /*
+         * Primeiro tentamos ler um usuário
+         * já inserido pelo AstroLearn.
+         */
         readUserContext();
+
+        /*
+         * Depois ficamos preparados para receber
+         * os dados por postMessage.
+         */
+        bindExternalProfileMessage();
 
         bindEvents();
 
         applyRoleToInterface();
 
-        updateConnectionStatus(
-            'offline',
-            'Aguardando início'
-        );
+        updateCharacterCounter();
 
         updateControls();
 
+        /*
+         * Se o usuário já veio da plataforma,
+         * o Sparky inicia automaticamente.
+         */
+        if (
+            state.role
+        ) {
+            updateConnectionStatus(
+                'connecting',
+                'Perfil identificado'
+            );
+
+            addMessage(
+                'system',
+                (
+                    `Perfil ${
+                        ROLE_CONFIG[
+                            state.role
+                        ].label
+                    } identificado. `
+                    +
+                    'Conectando ao Sparky automaticamente…'
+                )
+            );
+
+            window.setTimeout(
+                startConversation,
+                0
+            );
+
+            return;
+        }
+
+        /*
+         * Se abriu o chatbot diretamente,
+         * sem passar pela plataforma,
+         * ele não escolhe um perfil sozinho.
+         */
+        updateConnectionStatus(
+            'offline',
+            'Aguardando autenticação'
+        );
+
         addMessage(
             'system',
-            'Ambiente pronto. Escolha seu perfil e inicie o Sparky.'
+            (
+                'Aguardando o perfil da sua conta AstroLearn. '
+                +
+                'Abra o Sparky após fazer login na plataforma.'
+            )
         );
     }
 
-    // -------------------------------------------------------------------------
-    // Elementos HTML
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------------
+    // Elementos da página
+    // ---------------------------------------------------------------------
 
     function cacheElements() {
-        Object.assign(elements, {
-            chatBox:
-                document.getElementById(
-                    'chat-box'
-                ),
+        Object.assign(
+            elements,
+            {
+                chatBox:
+                    document.getElementById(
+                        'chat-box'
+                    ),
 
-            messageInput:
-                document.getElementById(
-                    'message-input'
-                ),
+                messageInput:
+                    document.getElementById(
+                        'message-input'
+                    ),
 
-            sendButton:
-                document.getElementById(
-                    'send-button'
-                ),
+                sendButton:
+                    document.getElementById(
+                        'send-button'
+                    ),
 
-            connectionStatus:
-                document.getElementById(
-                    'connection-status'
-                ),
+                connectionStatus:
+                    document.getElementById(
+                        'connection-status'
+                    ),
 
-            statusLabel:
-                document.querySelector(
-                    '#connection-status .status-label'
-                ),
+                statusLabel:
+                    document.querySelector(
+                        '#connection-status .status-label'
+                    ),
 
-            startButton:
-                document.getElementById(
-                    'iniciarBtn'
-                ),
+                startButton:
+                    document.getElementById(
+                        'iniciarBtn'
+                    ),
 
-            disconnectButton:
-                document.getElementById(
-                    'encerrarBtn'
-                ),
+                disconnectButton:
+                    document.getElementById(
+                        'encerrarBtn'
+                    ),
 
-            clearButton:
-                document.getElementById(
-                    'limparBtn'
-                ),
+                clearButton:
+                    document.getElementById(
+                        'limparBtn'
+                    ),
 
-            newConversationButton:
-                document.getElementById(
-                    'novaConversaBtn'
-                ),
+                newConversationButton:
+                    document.getElementById(
+                        'novaConversaBtn'
+                    ),
 
-            quickStart:
-                document.getElementById(
-                    'quick-start'
-                ),
+                quickStart:
+                    document.getElementById(
+                        'quick-start'
+                    ),
 
-            typingIndicator:
-                document.getElementById(
-                    'typing-indicator'
-                ),
+                typingIndicator:
+                    document.getElementById(
+                        'typing-indicator'
+                    ),
 
-            characterCounter:
-                document.getElementById(
-                    'char-counter'
-                ),
+                characterCounter:
+                    document.getElementById(
+                        'char-counter'
+                    ),
 
-            messageCount:
-                document.getElementById(
-                    'message-count'
-                ),
+                messageCount:
+                    document.getElementById(
+                        'message-count'
+                    ),
 
-            sessionTime:
-                document.getElementById(
-                    'session-time'
-                ),
+                sessionTime:
+                    document.getElementById(
+                        'session-time'
+                    ),
 
-            sessionLabel:
-                document.getElementById(
-                    'session-label'
-                ),
+                sessionLabel:
+                    document.getElementById(
+                        'session-label'
+                    ),
 
-            toastRegion:
-                document.getElementById(
-                    'toast-region'
-                ),
+                toastRegion:
+                    document.getElementById(
+                        'toast-region'
+                    ),
 
-            profileLabel:
-                document.getElementById(
-                    'profile-label'
-                ),
+                activeProfileChip:
+                    document.getElementById(
+                        'active-profile-chip'
+                    ),
 
-            activeProfileChip:
-                document.getElementById(
-                    'active-profile-chip'
-                ),
+                suggestionGroups:
+                    document.querySelectorAll(
+                        '[data-suggestion-group]'
+                    ),
 
-            profileButtons:
-                document.querySelectorAll(
-                    '[data-profile]'
-                ),
-
-            suggestionGroups:
-                document.querySelectorAll(
-                    '[data-suggestion-group]'
-                ),
-
-            quickPromptGroups:
-                document.querySelectorAll(
-                    '[data-quick-prompts]'
-                )
-        });
+                quickPromptGroups:
+                    document.querySelectorAll(
+                        '[data-quick-prompts]'
+                    )
+            }
+        );
     }
 
-    // -------------------------------------------------------------------------
-    // Contexto vindo do sistema principal
-    // -------------------------------------------------------------------------
-
-    /**
-     * Quando o AstroLearn possuir login integrado,
-     * poderá enviar o usuário desta maneira:
-     *
-     * window.STEAMBOT_USER = {
-     *     id: '123',
-     *     name: 'Daniel',
-     *     role: 'student'
-     * };
-     *
-     * Nesse cenário, futuramente podemos remover
-     * completamente a escolha manual de perfil.
-     */
+    // ---------------------------------------------------------------------
+    // Perfil recebido diretamente
+    // ---------------------------------------------------------------------
 
     function readUserContext() {
         const user =
@@ -273,7 +292,8 @@
 
         if (
             !user ||
-            typeof user !== 'object'
+            typeof user !==
+                'object'
         ) {
             return;
         }
@@ -291,128 +311,230 @@
 
         state.userName =
             safeText(
-                user.name,
+                user.name ||
+                user.nome,
                 80
             );
     }
 
-    // -------------------------------------------------------------------------
-    // Eventos da interface
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------------
+    // Perfil vindo da plataforma por postMessage
+    // ---------------------------------------------------------------------
 
-    function bindEvents() {
-        // Iniciar
-        elements.startButton.addEventListener(
-            'click',
-            startConversation
-        );
-
-        // Desconectar
-        elements.disconnectButton.addEventListener(
-            'click',
-            disconnectConversation
-        );
-
-        // Limpar tela
-        elements.clearButton.addEventListener(
-            'click',
-            () => {
-                clearChat(
-                    'Histórico visual limpo. O contexto da conversa foi mantido.'
-                );
-            }
-        );
-
-        // Nova conversa
-        elements.newConversationButton.addEventListener(
-            'click',
-            startNewConversation
-        );
-
-        // Enviar
-        elements.sendButton.addEventListener(
-            'click',
-            sendMessage
-        );
-
-        // Campo de mensagem
-        elements.messageInput.addEventListener(
-            'input',
-            () => {
-                updateCharacterCounter();
-                resizeComposer();
-                updateControls();
-            }
-        );
-
-        // Enter envia.
-        // Shift + Enter quebra linha.
-        elements.messageInput.addEventListener(
-            'keydown',
+    function bindExternalProfileMessage() {
+        window.addEventListener(
+            'message',
             (event) => {
-                if (
-                    event.key === 'Enter' &&
-                    !event.shiftKey
-                ) {
-                    event.preventDefault();
 
-                    sendMessage();
+                /*
+                 * Só aceitamos mensagens
+                 * de domínios conhecidos.
+                 */
+                if (
+                    !TRUSTED_PARENT_ORIGINS.has(
+                        event.origin
+                    )
+                ) {
+                    return;
+                }
+
+                const payload =
+                    event.data;
+
+                if (
+                    !payload ||
+                    payload.type !==
+                        'SPARKY_AUTH_CONTEXT'
+                ) {
+                    return;
+                }
+
+                const user =
+                    payload.user;
+
+                if (
+                    !user ||
+                    typeof user !==
+                        'object'
+                ) {
+                    return;
+                }
+
+                const role =
+                    normalizeRole(
+                        user.role
+                    );
+
+                if (
+                    !role
+                ) {
+                    return;
+                }
+
+                state.role =
+                    role;
+
+                state.userId =
+                    safeText(
+                        user.id,
+                        120
+                    );
+
+                state.userName =
+                    safeText(
+                        user.name ||
+                        user.nome,
+                        80
+                    );
+
+                applyRoleToInterface();
+
+                updateControls();
+
+                /*
+                 * Assim que recebe o perfil,
+                 * conecta automaticamente.
+                 */
+                if (
+                    !state.socket &&
+                    !state.connected
+                ) {
+                    addMessage(
+                        'system',
+                        (
+                            `Perfil ${
+                                ROLE_CONFIG[
+                                    state.role
+                                ].label
+                            } recebido da plataforma. `
+                            +
+                            'Conectando…'
+                        )
+                    );
+
+                    startConversation();
                 }
             }
         );
+    }
 
-        // Sugestões.
+    // ---------------------------------------------------------------------
+    // Eventos da interface
+    // ---------------------------------------------------------------------
+
+    function bindEvents() {
+        elements.startButton
+            .addEventListener(
+                'click',
+                startConversation
+            );
+
+        elements.disconnectButton
+            .addEventListener(
+                'click',
+                disconnectConversation
+            );
+
+        elements.clearButton
+            .addEventListener(
+                'click',
+                () => {
+                    clearChat(
+                        (
+                            'Histórico visual limpo. '
+                            +
+                            'O contexto da conversa foi mantido.'
+                        )
+                    );
+                }
+            );
+
+        elements.newConversationButton
+            .addEventListener(
+                'click',
+                startNewConversation
+            );
+
+        elements.sendButton
+            .addEventListener(
+                'click',
+                sendMessage
+            );
+
+        elements.messageInput
+            .addEventListener(
+                'input',
+                () => {
+                    updateCharacterCounter();
+
+                    resizeComposer();
+
+                    updateControls();
+                }
+            );
+
+        elements.messageInput
+            .addEventListener(
+                'keydown',
+                (event) => {
+                    if (
+                        event.key ===
+                            'Enter'
+                        &&
+                        !event.shiftKey
+                    ) {
+                        event.preventDefault();
+
+                        sendMessage();
+                    }
+                }
+            );
+
         document
             .querySelectorAll(
                 '[data-prompt]'
             )
             .forEach(
                 (button) => {
-                    button.addEventListener(
-                        'click',
-                        () => {
-                            selectPrompt(
-                                button.dataset.prompt
-                            );
-                        }
-                    );
+                    button
+                        .addEventListener(
+                            'click',
+                            () => {
+                                selectPrompt(
+                                    button.dataset
+                                        .prompt
+                                );
+                            }
+                        );
                 }
             );
 
-        // Perfil.
-        elements.profileButtons.forEach(
-            (button) => {
-                button.addEventListener(
-                    'click',
-                    () => {
-                        selectRole(
-                            button.dataset.profile
-                        );
-                    }
-                );
-            }
-        );
-
-        // Logo.
         document
-            .querySelector('.brand')
+            .querySelector(
+                '.brand'
+            )
             ?.addEventListener(
                 'click',
                 (event) => {
                     event.preventDefault();
 
-                    elements.startButton.focus();
+                    elements
+                        .messageInput
+                        .focus();
                 }
             );
     }
 
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------------
     // Perfil
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------------
 
-    function normalizeRole(value) {
+    function normalizeRole(
+        value
+    ) {
         if (
-            typeof value !== 'string'
+            typeof value !==
+                'string'
         ) {
             return null;
         }
@@ -427,7 +549,9 @@
                 'student',
                 'aluno',
                 'aluna'
-            ].includes(role)
+            ].includes(
+                role
+            )
         ) {
             return 'student';
         }
@@ -437,7 +561,9 @@
                 'teacher',
                 'professor',
                 'professora'
-            ].includes(role)
+            ].includes(
+                role
+            )
         ) {
             return 'teacher';
         }
@@ -450,7 +576,8 @@
         maxLength
     ) {
         if (
-            typeof value !== 'string'
+            typeof value !==
+                'string'
         ) {
             return null;
         }
@@ -464,183 +591,150 @@
                 );
 
         return normalized
-            ? normalized.slice(
+            ?
+            normalized.slice(
                 0,
                 maxLength
             )
-            : null;
-    }
-
-    // -------------------------------------------------------------------------
-    // Escolha do perfil
-    // -------------------------------------------------------------------------
-
-    function selectRole(role) {
-        const normalizedRole =
-            normalizeRole(role);
-
-        if (!normalizedRole) {
-            return;
-        }
-
-        /**
-         * REGRA PRINCIPAL:
-         *
-         * Se existir uma conexão ou tentativa de conexão,
-         * o perfil não poderá mais ser alterado.
-         *
-         * Para trocar, o usuário precisa clicar em
-         * "Desconectar".
-         */
-        if (
-            state.connected ||
-            state.socket
-        ) {
-            showToast(
-                'Encerre a sessão atual antes de trocar de perfil.',
-                'error'
-            );
-
-            return;
-        }
-
-        state.role =
-            normalizedRole;
-
-        applyRoleToInterface();
-
-        updateControls();
+            :
+            null;
     }
 
     function buildProfilePayload() {
         return {
-            role: state.role,
-            user_id: state.userId,
-            user_name: state.userName
+            role:
+                state.role,
+
+            user_id:
+                state.userId,
+
+            user_name:
+                state.userName
         };
     }
 
-    // -------------------------------------------------------------------------
-    // Atualiza interface conforme perfil
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------------
+    // Atualiza interface conforme o perfil
+    // ---------------------------------------------------------------------
 
     function applyRoleToInterface() {
         const roleConfig =
             state.role
-                ? ROLE_CONFIG[
+                ?
+                ROLE_CONFIG[
                     state.role
                 ]
-                : null;
+                :
+                null;
 
-        // Botões de perfil.
-        elements.profileButtons.forEach(
-            (button) => {
-                const isActive =
-                    button.dataset.profile
-                    === state.role;
+        /*
+         * Sugestões menores.
+         */
+        elements.suggestionGroups
+            .forEach(
+                (group) => {
+                    group.hidden =
+                        !state.role
+                        ||
+                        group.dataset
+                            .suggestionGroup
+                        !==
+                        state.role;
+                }
+            );
 
-                button.classList.toggle(
-                    'is-active',
-                    isActive
-                );
+        /*
+         * Sugestões grandes.
+         */
+        elements.quickPromptGroups
+            .forEach(
+                (group) => {
+                    group.hidden =
+                        !state.role
+                        ||
+                        group.dataset
+                            .quickPrompts
+                        !==
+                        state.role;
+                }
+            );
 
-                button.setAttribute(
-                    'aria-pressed',
-                    String(isActive)
-                );
-            }
-        );
-
-        // Sugestões inferiores.
-        elements.suggestionGroups.forEach(
-            (group) => {
-                group.hidden =
-                    !state.role ||
-                    group.dataset.suggestionGroup
-                    !== state.role;
-            }
-        );
-
-        // Sugestões iniciais.
-        elements.quickPromptGroups.forEach(
-            (group) => {
-                const visibleRole =
-                    state.role ||
-                    'student';
-
-                group.hidden =
-                    group.dataset.quickPrompts
-                    !== visibleRole;
-            }
-        );
-
-        // Texto do perfil na sidebar.
-        if (
-            elements.profileLabel
-        ) {
-            elements.profileLabel.textContent =
-                roleConfig?.label ||
-                'Não definido';
-        }
-
-        // Chip no topo.
+        /*
+         * O chip é apenas informativo.
+         * Não existe mais seleção manual.
+         */
         if (
             elements.activeProfileChip
         ) {
-            elements.activeProfileChip.textContent =
-                roleConfig?.label ||
-                'Escolha um perfil';
+            elements
+                .activeProfileChip
+                .textContent =
+                roleConfig?.label
+                ||
+                'Perfil não identificado';
         }
 
-        // Placeholder.
-        elements.messageInput.placeholder =
-            roleConfig?.placeholder ||
-            'Escolha um perfil e inicie o Sparky…';
+        elements
+            .messageInput
+            .placeholder =
+            roleConfig?.placeholder
+            ||
+            (
+                'Abra o Sparky pela plataforma '
+                +
+                'AstroLearn após fazer login…'
+            );
     }
 
-    // -------------------------------------------------------------------------
-    // Conexão Socket.IO
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------------
+    // Conexão
+    // ---------------------------------------------------------------------
 
     function startConversation() {
-        // Já conectado.
         if (
             state.connected
         ) {
-            elements.messageInput.focus();
+            elements
+                .messageInput
+                .focus();
 
             return;
         }
 
-        // Sem perfil.
+        /*
+         * Sem perfil vindo da plataforma,
+         * não conectamos.
+         */
         if (
             !state.role
         ) {
             showToast(
-                'Escolha Aluno ou Professor antes de iniciar.',
+                (
+                    'Perfil não identificado. '
+                    +
+                    'Faça login no AstroLearn e '
+                    +
+                    'abra o Sparky pela plataforma.'
+                ),
                 'error'
             );
-
-            elements
-                .profileButtons[0]
-                ?.focus();
 
             return;
         }
 
-        // Socket.IO não carregou.
         if (
-            typeof window.io
-            !== 'function'
+            typeof window.io !==
+                'function'
         ) {
             addMessage(
                 'error',
-                'Não foi possível carregar o módulo de conexão. Atualize a página e tente novamente.'
-            );
-
-            showToast(
-                'Módulo de conexão indisponível.',
-                'error'
+                (
+                    'Não foi possível carregar '
+                    +
+                    'o módulo de conexão. '
+                    +
+                    'Atualize a página e tente novamente.'
+                )
             );
 
             return;
@@ -662,7 +756,8 @@
         state.sessionStartedAt =
             null;
 
-        elements.sessionTime.textContent =
+        elements.sessionTime
+            .textContent =
             '00:00';
 
         updateConnectionStatus(
@@ -670,13 +765,12 @@
             'Conectando ao Sparky…'
         );
 
-        // O perfil é enviado UMA VEZ,
-        // no momento da conexão.
         const socket =
             window.io(
                 CONFIG.backendUrl,
                 {
-                    ...CONFIG.socketOptions,
+                    ...CONFIG
+                        .socketOptions,
 
                     auth:
                         buildProfilePayload()
@@ -690,25 +784,16 @@
             socket
         );
 
-        /**
-         * Assim que state.socket recebe um valor,
-         * updateControls() bloqueia os botões
-         * Aluno/Professor.
-         */
         updateControls();
     }
 
-    // -------------------------------------------------------------------------
-    // Eventos do Socket
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------------
+    // Eventos Socket.IO
+    // ---------------------------------------------------------------------
 
     function registerSocketEvents(
         socket
     ) {
-        // ---------------------------------------------------------------------
-        // Conectado
-        // ---------------------------------------------------------------------
-
         socket.on(
             'connect',
             () => {
@@ -735,13 +820,11 @@
 
                 updateControls();
 
-                elements.messageInput.focus();
+                elements
+                    .messageInput
+                    .focus();
             }
         );
-
-        // ---------------------------------------------------------------------
-        // Mensagem inicial
-        // ---------------------------------------------------------------------
 
         socket.on(
             'status_conexao',
@@ -749,7 +832,8 @@
                 if (
                     !isCurrentSocket(
                         socket
-                    ) ||
+                    )
+                    ||
                     state.welcomeShown
                 ) {
                     return;
@@ -761,9 +845,11 @@
 
                 addMessage(
                     'bot',
-                    data?.mensagem_inicial ||
+                    data?.mensagem_inicial
+                    ||
                     (
-                        'Olá! Eu sou o Sparky. ' +
+                        'Olá! Eu sou o Sparky. '
+                        +
                         'Como posso ajudar hoje?'
                     )
                 );
@@ -772,47 +858,6 @@
                     true;
             }
         );
-
-        // ---------------------------------------------------------------------
-        // Compatibilidade com evento de perfil atualizado
-        //
-        // O frontend não envia mais esse evento.
-        // O backend também deve bloquear alterações.
-        // ---------------------------------------------------------------------
-
-        socket.on(
-            'perfil_atualizado',
-            (data) => {
-                if (
-                    !isCurrentSocket(
-                        socket
-                    )
-                ) {
-                    return;
-                }
-
-                syncProfileFromServer(
-                    data?.profile
-                );
-
-                resetPendingRequest();
-
-                clearChat();
-
-                addMessage(
-                    'bot',
-                    data?.mensagem ||
-                    (
-                        'Perfil atualizado. ' +
-                        'Como posso ajudar?'
-                    )
-                );
-            }
-        );
-
-        // ---------------------------------------------------------------------
-        // Desconectado
-        // ---------------------------------------------------------------------
 
         socket.on(
             'disconnect',
@@ -837,16 +882,18 @@
                 resetPendingRequest();
 
                 if (
-                    state.manualDisconnect ||
+                    state.manualDisconnect
+                    ||
                     reason ===
-                    'io client disconnect'
+                        'io client disconnect'
                 ) {
                     updateConnectionStatus(
                         'offline',
                         'Sessão encerrada'
                     );
 
-                    elements.sessionLabel.textContent =
+                    elements.sessionLabel
+                        .textContent =
                         'Encerrada';
                 } else {
                     updateConnectionStatus(
@@ -856,7 +903,11 @@
 
                     addMessage(
                         'system',
-                        'A conexão caiu. Tentaremos restabelecê-la automaticamente.'
+                        (
+                            'A conexão caiu. '
+                            +
+                            'Tentaremos restabelecê-la automaticamente.'
+                        )
                     );
                 }
 
@@ -864,13 +915,9 @@
             }
         );
 
-        // ---------------------------------------------------------------------
-        // Erro de conexão
-        // ---------------------------------------------------------------------
-
         socket.on(
             'connect_error',
-            () => {
+            (error) => {
                 if (
                     !isCurrentSocket(
                         socket
@@ -884,7 +931,7 @@
 
                 updateConnectionStatus(
                     'offline',
-                    'Servidor indisponível'
+                    'Falha na autenticação/conexão'
                 );
 
                 updateControls();
@@ -894,12 +941,15 @@
                 ) {
                     addMessage(
                         'error',
-                        'Não foi possível alcançar o Sparky. O servidor pode estar iniciando ou indisponível.'
-                    );
-
-                    showToast(
-                        'Falha ao conectar com o servidor.',
-                        'error'
+                        error?.message
+                        ||
+                        (
+                            'Não foi possível conectar ao Sparky. '
+                            +
+                            'Verifique se seu perfil foi enviado '
+                            +
+                            'pela plataforma.'
+                        )
                     );
 
                     state.connectErrorShown =
@@ -907,10 +957,6 @@
                 }
             }
         );
-
-        // ---------------------------------------------------------------------
-        // Status da IA
-        // ---------------------------------------------------------------------
 
         socket.on(
             'status_bot',
@@ -924,39 +970,38 @@
                 }
 
                 const requestId =
-                    data?.request_id ||
+                    data?.request_id
+                    ||
                     null;
 
-                // Requisição já expirou.
                 if (
-                    requestId &&
-                    state.expiredRequestIds.has(
-                        requestId
-                    )
+                    requestId
+                    &&
+                    state.expiredRequestIds
+                        .has(
+                            requestId
+                        )
                 ) {
                     return;
                 }
 
-                // Resposta pertence a outra requisição.
                 if (
-                    requestId &&
-                    state.pendingRequestId &&
-                    requestId !==
+                    requestId
+                    &&
                     state.pendingRequestId
+                    &&
+                    requestId !==
+                        state.pendingRequestId
                 ) {
                     return;
                 }
 
                 setProcessing(
                     data?.status ===
-                    'processando'
+                        'processando'
                 );
             }
         );
-
-        // ---------------------------------------------------------------------
-        // Resposta do Sparky
-        // ---------------------------------------------------------------------
 
         socket.on(
             'nova_mensagem',
@@ -970,7 +1015,8 @@
                 }
 
                 const requestId =
-                    data?.request_id ||
+                    data?.request_id
+                    ||
                     null;
 
                 if (
@@ -984,13 +1030,18 @@
                 clearResponseTimeout();
 
                 if (
-                    typeof data?.texto
-                    !== 'string' ||
+                    typeof data?.texto !==
+                        'string'
+                    ||
                     !data.texto.trim()
                 ) {
                     addMessage(
                         'error',
-                        'O servidor retornou uma resposta inválida. Tente reformular a pergunta.'
+                        (
+                            'O servidor retornou uma resposta inválida. '
+                            +
+                            'Tente reformular a pergunta.'
+                        )
                     );
 
                     resetPendingRequest();
@@ -1006,7 +1057,8 @@
                     'bot',
                     data.texto,
                     {
-                        allowCopy: true
+                        allowCopy:
+                            true
                     }
                 );
 
@@ -1017,10 +1069,6 @@
                 );
             }
         );
-
-        // ---------------------------------------------------------------------
-        // Nova conversa
-        // ---------------------------------------------------------------------
 
         socket.on(
             'conversa_resetada',
@@ -1046,9 +1094,11 @@
 
                 addMessage(
                     'bot',
-                    data?.mensagem ||
+                    data?.mensagem
+                    ||
                     (
-                        'Nova conversa iniciada. ' +
+                        'Nova conversa iniciada. '
+                        +
                         'Como posso ajudar?'
                     )
                 );
@@ -1058,10 +1108,6 @@
                 );
             }
         );
-
-        // ---------------------------------------------------------------------
-        // Erro do backend
-        // ---------------------------------------------------------------------
 
         socket.on(
             'erro',
@@ -1075,7 +1121,8 @@
                 }
 
                 const requestId =
-                    data?.request_id ||
+                    data?.request_id
+                    ||
                     null;
 
                 if (
@@ -1090,10 +1137,12 @@
 
                 addMessage(
                     'error',
-                    data?.erro ||
+                    data?.erro
+                    ||
                     (
-                        'Não foi possível processar sua mensagem. ' +
-                        'Tente novamente.'
+                        'Não foi possível processar '
+                        +
+                        'sua mensagem. Tente novamente.'
                     )
                 );
 
@@ -1105,31 +1154,21 @@
             }
         );
 
-        // ---------------------------------------------------------------------
-        // Tentativa de reconexão
-        // ---------------------------------------------------------------------
-
         socket.io.on(
             'reconnect_attempt',
             () => {
                 if (
-                    !isCurrentSocket(
+                    isCurrentSocket(
                         socket
                     )
                 ) {
-                    return;
+                    updateConnectionStatus(
+                        'connecting',
+                        'Reconectando…'
+                    );
                 }
-
-                updateConnectionStatus(
-                    'connecting',
-                    'Reconectando…'
-                );
             }
         );
-
-        // ---------------------------------------------------------------------
-        // Reconexão falhou
-        // ---------------------------------------------------------------------
 
         socket.io.on(
             'reconnect_failed',
@@ -1155,25 +1194,22 @@
                 );
 
                 updateControls();
-
-                showToast(
-                    'Reconexão esgotada. Use “Iniciar Sparky” para tentar novamente.',
-                    'error'
-                );
             }
         );
     }
 
-    // -------------------------------------------------------------------------
-    // Sincronização de perfil
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------------
+    // Sincroniza o perfil recebido pelo servidor
+    // ---------------------------------------------------------------------
 
     function syncProfileFromServer(
         profile
     ) {
         if (
-            !profile ||
-            typeof profile !== 'object'
+            !profile
+            ||
+            typeof profile !==
+                'object'
         ) {
             return;
         }
@@ -1194,22 +1230,20 @@
             safeText(
                 profile.user_name,
                 80
-            ) ||
+            )
+            ||
             state.userName;
 
         state.userId =
             safeText(
                 profile.user_id,
                 120
-            ) ||
+            )
+            ||
             state.userId;
 
         applyRoleToInterface();
     }
-
-    // -------------------------------------------------------------------------
-    // Verifica socket atual
-    // -------------------------------------------------------------------------
 
     function isCurrentSocket(
         socket
@@ -1220,9 +1254,9 @@
         );
     }
 
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------------
     // Desconectar
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------------
 
     function disconnectConversation() {
         if (
@@ -1234,7 +1268,8 @@
         state.manualDisconnect =
             true;
 
-        state.socket.disconnect();
+        state.socket
+            .disconnect();
 
         destroySocket();
 
@@ -1254,28 +1289,23 @@
             'Sessão encerrada'
         );
 
-        elements.sessionLabel.textContent =
+        elements.sessionLabel
+            .textContent =
             'Encerrada';
 
         addMessage(
             'system',
-            'Sessão encerrada. Agora você pode trocar o perfil ou iniciar novamente.'
+            (
+                'Sessão encerrada. '
+                +
+                'Seu perfil continua vinculado '
+                +
+                'à conta autenticada.'
+            )
         );
 
-        /**
-         * Depois de destroySocket(),
-         * state.socket = null.
-         *
-         * Portanto updateControls()
-         * libera novamente os botões
-         * Aluno / Professor.
-         */
         updateControls();
     }
-
-    // -------------------------------------------------------------------------
-    // Destruir socket
-    // -------------------------------------------------------------------------
 
     function destroySocket() {
         if (
@@ -1284,45 +1314,46 @@
             return;
         }
 
-        state.socket.removeAllListeners();
+        state.socket
+            .removeAllListeners();
 
-        state.socket.io?.removeAllListeners();
+        state.socket.io
+            ?.removeAllListeners();
 
         if (
             state.socket.connected
         ) {
-            state.socket.disconnect();
+            state.socket
+                .disconnect();
         }
 
         state.socket =
             null;
     }
 
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------------
     // Nova conversa
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------------
 
     function startNewConversation() {
         if (
-            !state.socket ||
-            !state.connected ||
+            !state.socket
+            ||
+            !state.connected
+            ||
             state.processing
         ) {
             return;
         }
 
-        /**
-         * Nova conversa NÃO troca o perfil.
-         * O perfil só muda após desconectar.
-         */
         state.socket.emit(
             'resetar_conversa'
         );
     }
 
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------------
     // Enviar mensagem
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------------
 
     function sendMessage() {
         const text =
@@ -1330,55 +1361,58 @@
                 .value
                 .trim();
 
-        // Nada para enviar.
         if (
-            !text ||
+            !text
+            ||
             state.processing
         ) {
             return;
         }
 
-        // Perfil não escolhido.
         if (
             !state.role
         ) {
             showToast(
-                'Escolha seu perfil antes de enviar uma mensagem.',
+                (
+                    'Perfil não identificado. '
+                    +
+                    'Abra o Sparky pela plataforma AstroLearn.'
+                ),
                 'error'
             );
 
             return;
         }
 
-        // Mensagem muito grande.
         if (
             text.length >
-            CONFIG.maxMessageLength
+                CONFIG
+                    .maxMessageLength
         ) {
             showToast(
-                `A mensagem deve ter até ${CONFIG.maxMessageLength} caracteres.`,
+                (
+                    `A mensagem deve ter até ${
+                        CONFIG.maxMessageLength
+                    } caracteres.`
+                ),
                 'error'
             );
 
             return;
         }
 
-        // Sem conexão.
         if (
-            !state.socket ||
+            !state.socket
+            ||
             !state.connected
         ) {
             showToast(
-                'Inicie o Sparky antes de enviar uma mensagem.',
+                'O Sparky ainda não está conectado.',
                 'error'
             );
 
             return;
         }
-
-        // ---------------------------------------------------------------------
-        // Moderação simples do frontend
-        // ---------------------------------------------------------------------
 
         if (
             containsBlockedContent(
@@ -1386,16 +1420,25 @@
             )
         ) {
             showToast(
-                'Essa mensagem contém conteúdo não permitido na plataforma.',
+                (
+                    'Essa mensagem contém conteúdo '
+                    +
+                    'não permitido na plataforma.'
+                ),
                 'error'
             );
 
             addMessage(
                 'error',
-                'O Sparky aceita apenas conteúdos apropriados para o ambiente educacional.'
+                (
+                    'O Sparky aceita apenas conteúdos '
+                    +
+                    'apropriados para o ambiente educacional.'
+                )
             );
 
-            elements.messageInput.value =
+            elements.messageInput
+                .value =
                 '';
 
             updateCharacterCounter();
@@ -1407,20 +1450,15 @@
             return;
         }
 
-        // ---------------------------------------------------------------------
-        // Request ID
-        // ---------------------------------------------------------------------
-
         const requestId =
             createRequestId();
 
         state.pendingRequestId =
             requestId;
 
-        /**
-         * Quando o usuário envia a primeira
-         * mensagem, escondemos as sugestões
-         * grandes para priorizar o chat.
+        /*
+         * A área grande de sugestões desaparece
+         * assim que começa a conversa.
          */
         elements.quickStart.hidden =
             true;
@@ -1430,7 +1468,8 @@
             text
         );
 
-        elements.messageInput.value =
+        elements.messageInput
+            .value =
             '';
 
         updateCharacterCounter();
@@ -1457,34 +1496,61 @@
         );
     }
 
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------------
+    // Filtro
+    // ---------------------------------------------------------------------
+
+    function containsBlockedContent(
+        text
+    ) {
+        if (
+            typeof text !==
+                'string'
+        ) {
+            return false;
+        }
+
+        const normalized =
+            text
+                .normalize(
+                    'NFD'
+                )
+                .replace(
+                    /[\u0300-\u036f]/g,
+                    ''
+                )
+                .toLowerCase();
+
+        return CLIENT_BLOCKED_PATTERNS
+            .some(
+                (pattern) =>
+                    pattern.test(
+                        normalized
+                    )
+            );
+    }
+
+    // ---------------------------------------------------------------------
     // Sugestões
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------------
 
     function selectPrompt(
         prompt
     ) {
         if (
             !prompt
-        ) {
-            return;
-        }
-
-        if (
+            ||
             !state.role
         ) {
-            showToast(
-                'Escolha Aluno ou Professor para usar as sugestões.',
-                'error'
-            );
-
             return;
         }
 
-        elements.messageInput.value =
+        elements.messageInput
+            .value =
             prompt.slice(
                 0,
-                CONFIG.maxMessageLength
+                CONFIG
+                    .maxMessageLength
             );
 
         updateCharacterCounter();
@@ -1495,52 +1561,43 @@
             !state.connected
         ) {
             startConversation();
-
-            if (
-                state.role
-            ) {
-                showToast(
-                    'Sugestão preparada. Aguarde a conexão para enviar.'
-                );
-            }
         } else {
-            elements.messageInput.focus();
+            elements
+                .messageInput
+                .focus();
         }
 
         updateControls();
     }
 
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------------
     // Request ID
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------------
 
     function createRequestId() {
         if (
-            window.crypto?.randomUUID
+            window.crypto
+                ?.randomUUID
         ) {
-            return (
-                window.crypto.randomUUID()
-            );
+            return window.crypto
+                .randomUUID();
         }
 
         return (
-            `msg-${Date.now()}-${Math.random()
-                .toString(36)
-                .slice(2, 10)
+            `msg-${Date.now()}-${
+                Math.random()
+                    .toString(36)
+                    .slice(
+                        2,
+                        10
+                    )
             }`
         );
     }
 
-    // -------------------------------------------------------------------------
-    // Ignorar respostas antigas
-    // -------------------------------------------------------------------------
-
     function shouldIgnoreResponse(
         requestId
     ) {
-        /**
-         * Compatibilidade com backend antigo.
-         */
         if (
             !requestId
         ) {
@@ -1548,17 +1605,19 @@
         }
 
         if (
-            state.expiredRequestIds.has(
-                requestId
-            )
+            state.expiredRequestIds
+                .has(
+                    requestId
+                )
         ) {
             return true;
         }
 
         return Boolean(
-            state.pendingRequestId &&
-            requestId !==
             state.pendingRequestId
+            &&
+            requestId !==
+                state.pendingRequestId
         );
     }
 
@@ -1569,9 +1628,9 @@
             null;
     }
 
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------------
     // Mensagens
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------------
 
     function addMessage(
         sender,
@@ -1589,8 +1648,10 @@
             validSenders.includes(
                 sender
             )
-                ? sender
-                : 'bot';
+                ?
+                sender
+                :
+                'bot';
 
         const message =
             document.createElement(
@@ -1599,34 +1660,37 @@
 
         const safeTextValue =
             String(
-                text ?? ''
+                text ??
+                ''
             );
-
-        // ---------------------------------------------------------------------
-        // Sistema / erro
-        // ---------------------------------------------------------------------
 
         if (
             normalizedSender ===
-            'system' ||
+                'system'
+            ||
             normalizedSender ===
-            'error'
+                'error'
         ) {
             message.className =
                 'message is-system';
 
             const pill =
-                document.createElement(
-                    'p'
-                );
+                document
+                    .createElement(
+                        'p'
+                    );
 
             pill.className =
-                `system-pill${
-                    normalizedSender ===
-                    'error'
-                        ? ' is-error'
-                        : ''
-                }`;
+                (
+                    `system-pill${
+                        normalizedSender ===
+                        'error'
+                            ?
+                            ' is-error'
+                            :
+                            ''
+                    }`
+                );
 
             pill.textContent =
                 safeTextValue;
@@ -1634,21 +1698,15 @@
             message.appendChild(
                 pill
             );
-        }
-
-        // ---------------------------------------------------------------------
-        // Usuário / bot
-        // ---------------------------------------------------------------------
-
-        else {
+        } else {
             message.className =
                 `message is-${normalizedSender}`;
 
-            // Avatar.
             const avatar =
-                document.createElement(
-                    'span'
-                );
+                document
+                    .createElement(
+                        'span'
+                    );
 
             avatar.className =
                 'avatar';
@@ -1660,46 +1718,49 @@
 
             avatar.textContent =
                 normalizedSender ===
-                'user'
-                    ? 'EU'
-                    : 'S+';
+                    'user'
+                    ?
+                    'EU'
+                    :
+                    'S+';
 
-            // Card.
             const card =
-                document.createElement(
-                    'div'
-                );
+                document
+                    .createElement(
+                        'div'
+                    );
 
             card.className =
                 'message-card';
 
-            // -----------------------------------------------------------------
-            // Cabeçalho da mensagem
-            // -----------------------------------------------------------------
-
             const meta =
-                document.createElement(
-                    'div'
-                );
+                document
+                    .createElement(
+                        'div'
+                    );
 
             meta.className =
                 'message-meta';
 
             const author =
-                document.createElement(
-                    'span'
-                );
+                document
+                    .createElement(
+                        'span'
+                    );
 
             author.textContent =
                 normalizedSender ===
-                'user'
-                    ? 'Você'
-                    : 'Sparky';
+                    'user'
+                    ?
+                    'Você'
+                    :
+                    'Sparky';
 
             const time =
-                document.createElement(
-                    'time'
-                );
+                document
+                    .createElement(
+                        'time'
+                    );
 
             const now =
                 new Date();
@@ -1717,21 +1778,18 @@
                 time
             );
 
-            // -----------------------------------------------------------------
-            // Conteúdo
-            // -----------------------------------------------------------------
-
             const content =
-                document.createElement(
-                    'div'
-                );
+                document
+                    .createElement(
+                        'div'
+                    );
 
             content.className =
                 'message-content';
 
             if (
                 normalizedSender ===
-                'bot'
+                    'bot'
             ) {
                 renderSafeMarkdown(
                     content,
@@ -1747,13 +1805,10 @@
                 content
             );
 
-            // -----------------------------------------------------------------
-            // Copiar resposta
-            // -----------------------------------------------------------------
-
             if (
                 normalizedSender ===
-                'bot' &&
+                    'bot'
+                &&
                 options.allowCopy
             ) {
                 card.appendChild(
@@ -1771,24 +1826,25 @@
             state.messageCount +=
                 1;
 
-            elements.messageCount.textContent =
+            elements.messageCount
+                .textContent =
                 String(
                     state.messageCount
                 );
         }
 
-        elements.chatBox.appendChild(
-            message
-        );
+        elements.chatBox
+            .appendChild(
+                message
+            );
 
-        /**
-         * Assim que houver uma mensagem real
-         * de usuário/bot, as sugestões grandes
-         * desaparecem.
-         */
-        elements.quickStart.hidden =
+        if (
             state.messageCount >
-            0;
+                0
+        ) {
+            elements.quickStart.hidden =
+                true;
+        }
 
         requestAnimationFrame(
             () => {
@@ -1803,25 +1859,27 @@
         );
     }
 
-    // -------------------------------------------------------------------------
-    // Ações das respostas
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------------
+    // Botão copiar
+    // ---------------------------------------------------------------------
 
     function createMessageActions(
         text
     ) {
         const actions =
-            document.createElement(
-                'div'
-            );
+            document
+                .createElement(
+                    'div'
+                );
 
         actions.className =
             'message-actions';
 
         const copyButton =
-            document.createElement(
-                'button'
-            );
+            document
+                .createElement(
+                    'button'
+                );
 
         copyButton.type =
             'button';
@@ -1832,33 +1890,41 @@
         copyButton.textContent =
             'Copiar';
 
-        copyButton.addEventListener(
-            'click',
-            async () => {
-                try {
-                    await navigator.clipboard
-                        .writeText(
-                            text
+        copyButton
+            .addEventListener(
+                'click',
+                async () => {
+                    try {
+                        await navigator
+                            .clipboard
+                            .writeText(
+                                text
+                            );
+
+                        copyButton
+                            .textContent =
+                            'Copiado ✓';
+
+                        window.setTimeout(
+                            () => {
+                                copyButton
+                                    .textContent =
+                                    'Copiar';
+                            },
+                            1600
                         );
-
-                    copyButton.textContent =
-                        'Copiado ✓';
-
-                    window.setTimeout(
-                        () => {
-                            copyButton.textContent =
-                                'Copiar';
-                        },
-                        1600
-                    );
-                } catch {
-                    showToast(
-                        'Não foi possível copiar automaticamente.',
-                        'error'
-                    );
+                    } catch {
+                        showToast(
+                            (
+                                'Não foi possível copiar '
+                                +
+                                'automaticamente.'
+                            ),
+                            'error'
+                        );
+                    }
                 }
-            }
-        );
+            );
 
         actions.appendChild(
             copyButton
@@ -1867,54 +1933,59 @@
         return actions;
     }
 
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------------
     // Markdown seguro
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------------
 
     function renderSafeMarkdown(
         container,
         text
     ) {
         if (
-            window.marked &&
+            window.marked
+            &&
             window.DOMPurify
         ) {
             const parsed =
                 window.marked.parse(
                     text,
                     {
-                        breaks: true,
-                        gfm: true
+                        breaks:
+                            true,
+
+                        gfm:
+                            true
                     }
                 );
 
             container.innerHTML =
-                window.DOMPurify.sanitize(
-                    parsed,
-                    {
-                        USE_PROFILES: {
-                            html: true
-                        },
+                window.DOMPurify
+                    .sanitize(
+                        parsed,
+                        {
+                            USE_PROFILES: {
+                                html:
+                                    true
+                            },
 
-                        FORBID_TAGS: [
-                            'style',
-                            'iframe',
-                            'form',
-                            'input',
-                            'button',
-                            'script'
-                        ],
+                            FORBID_TAGS: [
+                                'style',
+                                'iframe',
+                                'form',
+                                'input',
+                                'button',
+                                'script'
+                            ],
 
-                        FORBID_ATTR: [
-                            'style',
-                            'onerror',
-                            'onclick',
-                            'onload'
-                        ]
-                    }
-                );
+                            FORBID_ATTR: [
+                                'style',
+                                'onerror',
+                                'onclick',
+                                'onload'
+                            ]
+                        }
+                    );
 
-            // Links abrem de forma segura.
             container
                 .querySelectorAll(
                     'a'
@@ -1932,17 +2003,13 @@
             return;
         }
 
-        /**
-         * Fallback caso as bibliotecas
-         * externas não carreguem.
-         */
         container.textContent =
             text;
     }
 
-    // -------------------------------------------------------------------------
-    // Limpar chat
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------------
+    // Limpeza
+    // ---------------------------------------------------------------------
 
     function clearChat(
         message = ''
@@ -1953,16 +2020,12 @@
         state.messageCount =
             0;
 
-        elements.messageCount.textContent =
+        elements.messageCount
+            .textContent =
             '0';
 
-        /**
-         * Volta a mostrar as sugestões.
-         * addMessage(bot) poderá escondê-las
-         * novamente depois.
-         */
         elements.quickStart.hidden =
-            false;
+            !state.role;
 
         if (
             message
@@ -1974,9 +2037,9 @@
         }
     }
 
-    // -------------------------------------------------------------------------
-    // Estado "Sparky está respondendo"
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------------
+    // Processamento
+    // ---------------------------------------------------------------------
 
     function setProcessing(
         processing
@@ -1986,7 +2049,8 @@
                 processing
             );
 
-        elements.typingIndicator.hidden =
+        elements.typingIndicator
+            .hidden =
             !state.processing;
 
         const label =
@@ -2000,8 +2064,10 @@
         ) {
             label.textContent =
                 state.processing
-                    ? 'Aguarde'
-                    : 'Enviar';
+                    ?
+                    'Aguarde'
+                    :
+                    'Enviar';
         }
 
         if (
@@ -2013,9 +2079,9 @@
         updateControls();
     }
 
-    // -------------------------------------------------------------------------
-    // Botões / controles
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------------
+    // Controles
+    // ---------------------------------------------------------------------
 
     function updateControls() {
         const hasText =
@@ -2031,97 +2097,68 @@
             );
 
         const canWrite =
-            state.connected &&
-            !state.processing &&
+            state.connected
+            &&
+            !state.processing
+            &&
             hasRole;
 
         const connecting =
             Boolean(
-                state.socket &&
-                !state.connected &&
+                state.socket
+                &&
+                !state.connected
+                &&
                 !state.manualDisconnect
             );
 
-        /**
-         * Enquanto existir socket,
-         * o perfil permanece travado.
-         *
-         * Isso inclui:
-         * - conectando;
-         * - conectado;
-         * - tentando reconectar.
-         */
-        const profileLocked =
-            Boolean(
-                state.connected ||
-                state.socket
-            );
-
-        // Campo.
-        elements.messageInput.disabled =
+        elements.messageInput
+            .disabled =
             !canWrite;
 
-        // Botão enviar.
-        elements.sendButton.disabled =
-            !canWrite ||
+        elements.sendButton
+            .disabled =
+            !canWrite
+            ||
             !hasText;
 
-        // Iniciar.
-        elements.startButton.disabled =
-            state.connected ||
-            connecting ||
+        elements.startButton
+            .disabled =
+            state.connected
+            ||
+            connecting
+            ||
             !hasRole;
 
-        // Desconectar.
-        elements.disconnectButton.disabled =
+        elements.disconnectButton
+            .disabled =
             !state.socket;
 
-        // Nova conversa.
-        elements.newConversationButton.disabled =
+        elements.newConversationButton
+            .disabled =
             !canWrite;
-
-        // ---------------------------------------------------------------------
-        // PERFIL BLOQUEADO
-        // ---------------------------------------------------------------------
-
-        elements.profileButtons.forEach(
-            (button) => {
-                button.disabled =
-                    profileLocked;
-
-                button.setAttribute(
-                    'aria-disabled',
-                    String(
-                        profileLocked
-                    )
-                );
-
-                button.title =
-                    profileLocked
-                        ? 'Desconecte o Sparky para trocar de perfil.'
-                        : 'Selecionar este perfil.';
-            }
-        );
     }
 
-    // -------------------------------------------------------------------------
-    // Status de conexão
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------------
+    // Status
+    // ---------------------------------------------------------------------
 
     function updateConnectionStatus(
         status,
         label
     ) {
-        elements.connectionStatus.className =
+        elements.connectionStatus
+            .className =
             `connection-badge is-${status}`;
 
-        elements.statusLabel.textContent =
+        elements.statusLabel
+            .textContent =
             label;
     }
 
-    // -------------------------------------------------------------------------
-    // Contador de caracteres
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------------
+    // Contador
+    // ---------------------------------------------------------------------
 
     function updateCharacterCounter() {
         const length =
@@ -2129,28 +2166,36 @@
                 .value
                 .length;
 
-        elements.characterCounter.textContent =
+        elements.characterCounter
+            .textContent =
             `${length} / ${CONFIG.maxMessageLength}`;
     }
 
-    // -------------------------------------------------------------------------
-    // Altura automática do textarea
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------------
+    // Textarea
+    // ---------------------------------------------------------------------
 
     function resizeComposer() {
-        elements.messageInput.style.height =
+        elements.messageInput
+            .style
+            .height =
             'auto';
 
-        elements.messageInput.style.height =
-            `${Math.min(
-                elements.messageInput.scrollHeight,
-                140
-            )}px`;
+        elements.messageInput
+            .style
+            .height =
+            `${
+                Math.min(
+                    elements.messageInput
+                        .scrollHeight,
+                    140
+                )
+            }px`;
     }
 
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------------
     // Cronômetro
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------------
 
     function startSessionTimer() {
         if (
@@ -2160,7 +2205,8 @@
                 Date.now();
         }
 
-        elements.sessionLabel.textContent =
+        elements.sessionLabel
+            .textContent =
             'Em andamento';
 
         updateSessionTimer();
@@ -2199,38 +2245,46 @@
         const elapsedSeconds =
             Math.floor(
                 (
-                    Date.now() -
+                    Date.now()
+                    -
                     state.sessionStartedAt
-                ) / 1000
+                )
+                /
+                1000
             );
 
         const minutes =
             String(
                 Math.floor(
-                    elapsedSeconds /
+                    elapsedSeconds
+                    /
                     60
                 )
-            ).padStart(
-                2,
-                '0'
-            );
+            )
+                .padStart(
+                    2,
+                    '0'
+                );
 
         const seconds =
             String(
-                elapsedSeconds %
+                elapsedSeconds
+                %
                 60
-            ).padStart(
-                2,
-                '0'
-            );
+            )
+                .padStart(
+                    2,
+                    '0'
+                );
 
-        elements.sessionTime.textContent =
+        elements.sessionTime
+            .textContent =
             `${minutes}:${seconds}`;
     }
 
-    // -------------------------------------------------------------------------
-    // Timeout da resposta
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------------
+    // Timeout
+    // ---------------------------------------------------------------------
 
     function armResponseTimeout(
         requestId
@@ -2240,39 +2294,37 @@
         state.responseTimeoutId =
             window.setTimeout(
                 () => {
-                    // Outra requisição assumiu.
+
                     if (
-                        !state.processing ||
+                        !state.processing
+                        ||
                         state.pendingRequestId !==
-                        requestId
+                            requestId
                     ) {
                         return;
                     }
 
-                    /**
-                     * Marca como expirado para que
-                     * uma resposta atrasada seja ignorada.
-                     */
-                    state.expiredRequestIds.add(
-                        requestId
-                    );
+                    state.expiredRequestIds
+                        .add(
+                            requestId
+                        );
 
-                    /**
-                     * Evita crescimento infinito.
-                     */
                     if (
-                        state.expiredRequestIds.size >
+                        state.expiredRequestIds
+                            .size >
                         30
                     ) {
                         const oldest =
-                            state.expiredRequestIds
+                            state
+                                .expiredRequestIds
                                 .values()
                                 .next()
                                 .value;
 
-                        state.expiredRequestIds.delete(
-                            oldest
-                        );
+                        state.expiredRequestIds
+                            .delete(
+                                oldest
+                            );
                     }
 
                     state.pendingRequestId =
@@ -2285,10 +2337,9 @@
                     addMessage(
                         'error',
                         (
-                            'A resposta demorou mais que o esperado. ' +
-                            'Você pode tentar novamente; ' +
-                            'se a resposta antiga chegar depois, ' +
-                            'ela será ignorada.'
+                            'A resposta demorou mais que o esperado. '
+                            +
+                            'Você pode tentar novamente.'
                         )
                     );
                 },
@@ -2310,9 +2361,9 @@
             null;
     }
 
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------------
     // Toast
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------------
 
     function showToast(
         message,
@@ -2324,30 +2375,35 @@
             );
 
         toast.className =
-            `toast${
-                type === 'error'
-                    ? ' is-error'
-                    : ''
-            }`;
+            (
+                `toast${
+                    type ===
+                    'error'
+                        ?
+                        ' is-error'
+                        :
+                        ''
+                }`
+            );
 
         toast.textContent =
             message;
 
-        elements.toastRegion.appendChild(
-            toast
-        );
+        elements.toastRegion
+            .appendChild(
+                toast
+            );
 
         window.setTimeout(
-            () => {
-                toast.remove();
-            },
+            () =>
+                toast.remove(),
             4500
         );
     }
 
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------------
     // Horário
-    // -------------------------------------------------------------------------
+    // ---------------------------------------------------------------------
 
     function formatTime(
         date
@@ -2356,12 +2412,16 @@
             new Intl.DateTimeFormat(
                 'pt-BR',
                 {
-                    hour: '2-digit',
-                    minute: '2-digit'
+                    hour:
+                        '2-digit',
+
+                    minute:
+                        '2-digit'
                 }
-            ).format(
-                date
             )
+                .format(
+                    date
+                )
         );
     }
 })();

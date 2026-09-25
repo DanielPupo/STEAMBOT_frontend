@@ -57,7 +57,7 @@
     <main class="app-shell">
 
         <!-- ================================================================
-             SIDEBAR
+             Sidebar
              ================================================================ -->
 
         <aside
@@ -117,66 +117,7 @@
 
                 </section>
 
-                <!-- ========================================================
-                     PERFIL
-                     ======================================================== -->
-
-                <section
-                    class="profile-panel"
-                    aria-labelledby="profile-title"
-                >
-
-                    <div class="section-heading">
-
-                        <h2 id="profile-title">
-                            Perfil
-                        </h2>
-
-                        <span id="profile-label">
-                            Não definido
-                        </span>
-
-                    </div>
-
-                    <div
-                        class="profile-switch"
-                        role="group"
-                        aria-label="Escolha o perfil de uso"
-                    >
-
-                        <button
-                            class="profile-button"
-                            type="button"
-                            data-profile="student"
-                            aria-pressed="false"
-                            title="Selecionar perfil de aluno"
-                        >
-                            Aluno
-                        </button>
-
-                        <button
-                            class="profile-button"
-                            type="button"
-                            data-profile="teacher"
-                            aria-pressed="false"
-                            title="Selecionar perfil de professor"
-                        >
-                            Professor
-                        </button>
-
-                    </div>
-
-                    <p class="profile-help">
-                        Escolha o perfil antes de iniciar. Durante a sessão,
-                        ele ficará bloqueado.
-                    </p>
-
-                </section>
-
-                <!-- ========================================================
-                     SESSÃO
-                     ======================================================== -->
-
+                <!-- Sessão -->
                 <section
                     class="session-panel"
                     aria-labelledby="session-title"
@@ -226,10 +167,7 @@
 
             </div>
 
-            <!-- ============================================================
-                 AÇÕES DA SIDEBAR
-                 ============================================================ -->
-
+            <!-- Ações -->
             <div class="sidebar-actions">
 
                 <button
@@ -247,7 +185,7 @@
                     </span>
 
                     <span>
-                        Iniciar Sparky
+                        Reconectar Sparky
                     </span>
 
                 </button>
@@ -287,7 +225,7 @@
         </aside>
 
         <!-- ================================================================
-             ÁREA PRINCIPAL
+             Área principal
              ================================================================ -->
 
         <section
@@ -316,7 +254,7 @@
                         id="active-profile-chip"
                         class="active-profile-chip"
                     >
-                        Escolha um perfil
+                        Perfil automático
                     </span>
 
                 </div>
@@ -334,7 +272,7 @@
                     ></span>
 
                     <span class="status-label">
-                        Aguardando início
+                        Aguardando autenticação
                     </span>
 
                 </div>
@@ -342,7 +280,7 @@
             </header>
 
             <!-- ============================================================
-                 CONVERSA
+                 Conversa
                  ============================================================ -->
 
             <div class="chat-body">
@@ -374,13 +312,11 @@
 
                     </div>
 
-                    <!-- ====================================================
-                         SUGESTÕES PARA ALUNO
-                         ==================================================== -->
-
+                    <!-- Sugestões para aluno -->
                     <div
                         class="prompt-grid"
                         data-quick-prompts="student"
+                        hidden
                     >
 
                         <button
@@ -487,10 +423,7 @@
 
                     </div>
 
-                    <!-- ====================================================
-                         SUGESTÕES PARA PROFESSOR
-                         ==================================================== -->
-
+                    <!-- Sugestões para professor -->
                     <div
                         class="prompt-grid"
                         data-quick-prompts="teacher"
@@ -612,7 +545,7 @@
                     aria-relevant="additions"
                 ></div>
 
-                <!-- Indicador -->
+                <!-- Indicador de digitação -->
                 <div
                     id="typing-indicator"
                     class="typing-indicator"
@@ -645,12 +578,12 @@
             </div>
 
             <!-- ============================================================
-                 CAMPO DE MENSAGEM
+                 Campo de mensagem
                  ============================================================ -->
 
             <footer class="composer">
 
-                <!-- Sugestões menores -->
+                <!-- Sugestões rápidas -->
                 <section
                     class="composer-tools"
                     aria-labelledby="suggestions-title"
@@ -684,11 +617,13 @@
                             type="button"
                             data-prompt="Crie um desafio rápido de robótica que eu consiga começar em 5 minutos."
                         >
+
                             <span aria-hidden="true">
                                 🚀
                             </span>
 
                             Desafio de 5 minutos
+
                         </button>
 
                         <button
@@ -696,11 +631,13 @@
                             type="button"
                             data-prompt="Ajude-me a fazer meu primeiro robô se movimentar, com passos simples."
                         >
+
                             <span aria-hidden="true">
                                 ⚙️
                             </span>
 
                             Fazer o robô andar
+
                         </button>
 
                         <button
@@ -708,11 +645,13 @@
                             type="button"
                             data-prompt="Transforme o conteúdo de sensores em uma missão curta com XP e conquista."
                         >
+
                             <span aria-hidden="true">
                                 🏅
                             </span>
 
                             Missão com XP
+
                         </button>
 
                     </div>
@@ -729,11 +668,13 @@
                             type="button"
                             data-prompt="Crie um plano de aula maker de 50 minutos, com objetivo, materiais e etapas."
                         >
+
                             <span aria-hidden="true">
                                 ▤
                             </span>
 
                             Plano de aula
+
                         </button>
 
                         <button
@@ -741,11 +682,13 @@
                             type="button"
                             data-prompt="Crie uma rubrica simples para avaliar um projeto de robótica em equipe."
                         >
+
                             <span aria-hidden="true">
                                 ✓
                             </span>
 
                             Rubrica de avaliação
+
                         </button>
 
                         <button
@@ -753,11 +696,13 @@
                             type="button"
                             data-prompt="Sugira uma organização equilibrada de funções para equipes em um projeto maker."
                         >
+
                             <span aria-hidden="true">
                                 ◫
                             </span>
 
                             Organizar equipes
+
                         </button>
 
                     </div>
@@ -778,7 +723,7 @@
                         id="message-input"
                         rows="1"
                         maxlength="1500"
-                        placeholder="Escolha um perfil e inicie o Sparky…"
+                        placeholder="Abra o Sparky pela plataforma AstroLearn após fazer login…"
                         disabled
                     ></textarea>
 
@@ -791,7 +736,7 @@
 
                 </div>
 
-                <!-- Botão enviar -->
+                <!-- Enviar -->
                 <button
                     id="send-button"
                     class="send-button"
@@ -820,10 +765,7 @@
 
     </main>
 
-    <!-- ================================================================
-         TOASTS
-         ================================================================ -->
-
+    <!-- Toasts -->
     <div
         id="toast-region"
         class="toast-region"
@@ -831,10 +773,7 @@
         aria-atomic="true"
     ></div>
 
-    <!-- ================================================================
-         DEPENDÊNCIAS
-         ================================================================ -->
-
+    <!-- Dependências -->
     <script
         src="https://cdn.socket.io/4.7.5/socket.io.min.js"
     ></script>
