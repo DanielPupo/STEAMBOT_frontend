@@ -6,9 +6,13 @@
     // -------------------------------------------------------------------------
 
     const CONFIG = Object.freeze({
-        backendUrl: window.STEAMBOT_CONFIG?.backendUrl || 'https://steambot-backend.onrender.com',
+        backendUrl:
+            window.STEAMBOT_CONFIG?.backendUrl ||
+            'https://steambot-backend.onrender.com',
+
         maxMessageLength: 1500,
         responseTimeoutMs: 60000,
+
         socketOptions: {
             transports: ['websocket', 'polling'],
             reconnection: true,
@@ -22,37 +26,48 @@
     const ROLE_CONFIG = Object.freeze({
         student: {
             label: 'Aluno',
-            placeholder: 'Pergunte sobre montagem, sensores, programação ou projetos…'
+            placeholder:
+                'Pergunte sobre montagem, sensores, programação ou projetos…'
         },
+
         teacher: {
             label: 'Professor',
-            placeholder: 'Pergunte sobre aulas, projetos maker, rubricas ou organização de equipes…'
+            placeholder:
+                'Pergunte sobre aulas, projetos maker, rubricas ou organização de equipes…'
         }
     });
 
+    // -------------------------------------------------------------------------
+    // Filtro simples do frontend
+    //
+    // IMPORTANTE:
+    // O filtro principal continua sendo o backend.
+    // Este filtro serve apenas para feedback imediato.
+    // -------------------------------------------------------------------------
+
     const CLIENT_BLOCKED_PATTERNS = [
-    /\bporn(?:o|ografia|ográfico|ográfica)?\b/i,
-    /\bnudes?\b/i,
-    /\bconteúdo adulto\b/i,
-    /\bconteúdo \+18\b/i,
-    /\bmaior de 18\b/i,
-    /\bsexo explícito\b/i
-];
+        /\bporn(?:o|ografia|ográfico|ográfica)?\b/i,
+        /\bnudes?\b/i,
+        /\bconteúdo adulto\b/i,
+        /\bconteúdo \+18\b/i,
+        /\bmaior de 18\b/i,
+        /\bsexo explícito\b/i
+    ];
 
-function containsBlockedContent(text) {
-    if (typeof text !== 'string') {
-        return false;
+    function containsBlockedContent(text) {
+        if (typeof text !== 'string') {
+            return false;
+        }
+
+        const normalized = text
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase();
+
+        return CLIENT_BLOCKED_PATTERNS.some(
+            (pattern) => pattern.test(normalized)
+        );
     }
-
-    const normalized = text
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .toLowerCase();
-
-    return CLIENT_BLOCKED_PATTERNS.some(
-        (pattern) => pattern.test(normalized)
-    );
-}
 
     // -------------------------------------------------------------------------
     // Estado da interface
@@ -60,30 +75,40 @@ function containsBlockedContent(text) {
 
     const state = {
         socket: null,
+
         connected: false,
         processing: false,
+
         manualDisconnect: false,
         connectErrorShown: false,
         welcomeShown: false,
 
+        // Perfil
         role: null,
         userId: null,
         userName: null,
 
+        // Estatísticas
         messageCount: 0,
 
+        // Cronômetro
         sessionStartedAt: null,
         timerId: null,
 
+        // Requisição atual
         responseTimeoutId: null,
         pendingRequestId: null,
 
+        // IDs que já expiraram.
         expiredRequestIds: new Set()
     };
 
     const elements = {};
 
-    document.addEventListener('DOMContentLoaded', initialize);
+    document.addEventListener(
+        'DOMContentLoaded',
+        initialize
+    );
 
     // -------------------------------------------------------------------------
     // Inicialização
@@ -91,8 +116,11 @@ function containsBlockedContent(text) {
 
     function initialize() {
         cacheElements();
+
         readUserContext();
+
         bindEvents();
+
         applyRoleToInterface();
 
         updateConnectionStatus(
@@ -108,75 +136,164 @@ function containsBlockedContent(text) {
         );
     }
 
+    // -------------------------------------------------------------------------
+    // Elementos HTML
+    // -------------------------------------------------------------------------
+
     function cacheElements() {
         Object.assign(elements, {
-            chatBox: document.getElementById('chat-box'),
-            messageInput: document.getElementById('message-input'),
-            sendButton: document.getElementById('send-button'),
+            chatBox:
+                document.getElementById(
+                    'chat-box'
+                ),
 
-            connectionStatus: document.getElementById('connection-status'),
-            statusLabel: document.querySelector(
-                '#connection-status .status-label'
-            ),
+            messageInput:
+                document.getElementById(
+                    'message-input'
+                ),
 
-            startButton: document.getElementById('iniciarBtn'),
-            disconnectButton: document.getElementById('encerrarBtn'),
-            clearButton: document.getElementById('limparBtn'),
-            newConversationButton: document.getElementById('novaConversaBtn'),
+            sendButton:
+                document.getElementById(
+                    'send-button'
+                ),
 
-            quickStart: document.getElementById('quick-start'),
-            typingIndicator: document.getElementById('typing-indicator'),
+            connectionStatus:
+                document.getElementById(
+                    'connection-status'
+                ),
 
-            characterCounter: document.getElementById('char-counter'),
-            messageCount: document.getElementById('message-count'),
-            sessionTime: document.getElementById('session-time'),
-            sessionLabel: document.getElementById('session-label'),
+            statusLabel:
+                document.querySelector(
+                    '#connection-status .status-label'
+                ),
 
-            toastRegion: document.getElementById('toast-region'),
+            startButton:
+                document.getElementById(
+                    'iniciarBtn'
+                ),
 
-            profileLabel: document.getElementById('profile-label'),
-            activeProfileChip: document.getElementById('active-profile-chip'),
+            disconnectButton:
+                document.getElementById(
+                    'encerrarBtn'
+                ),
 
-            profileButtons: document.querySelectorAll('[data-profile]'),
-            suggestionGroups: document.querySelectorAll(
-                '[data-suggestion-group]'
-            ),
-            quickPromptGroups: document.querySelectorAll(
-                '[data-quick-prompts]'
-            )
+            clearButton:
+                document.getElementById(
+                    'limparBtn'
+                ),
+
+            newConversationButton:
+                document.getElementById(
+                    'novaConversaBtn'
+                ),
+
+            quickStart:
+                document.getElementById(
+                    'quick-start'
+                ),
+
+            typingIndicator:
+                document.getElementById(
+                    'typing-indicator'
+                ),
+
+            characterCounter:
+                document.getElementById(
+                    'char-counter'
+                ),
+
+            messageCount:
+                document.getElementById(
+                    'message-count'
+                ),
+
+            sessionTime:
+                document.getElementById(
+                    'session-time'
+                ),
+
+            sessionLabel:
+                document.getElementById(
+                    'session-label'
+                ),
+
+            toastRegion:
+                document.getElementById(
+                    'toast-region'
+                ),
+
+            profileLabel:
+                document.getElementById(
+                    'profile-label'
+                ),
+
+            activeProfileChip:
+                document.getElementById(
+                    'active-profile-chip'
+                ),
+
+            profileButtons:
+                document.querySelectorAll(
+                    '[data-profile]'
+                ),
+
+            suggestionGroups:
+                document.querySelectorAll(
+                    '[data-suggestion-group]'
+                ),
+
+            quickPromptGroups:
+                document.querySelectorAll(
+                    '[data-quick-prompts]'
+                )
         });
     }
 
+    // -------------------------------------------------------------------------
+    // Contexto vindo do sistema principal
+    // -------------------------------------------------------------------------
+
     /**
-     * Permite que futuramente o sistema principal
-     * envie o usuário autenticado dessa forma:
+     * Quando o AstroLearn possuir login integrado,
+     * poderá enviar o usuário desta maneira:
      *
      * window.STEAMBOT_USER = {
      *     id: '123',
      *     name: 'Daniel',
      *     role: 'student'
      * };
+     *
+     * Nesse cenário, futuramente podemos remover
+     * completamente a escolha manual de perfil.
      */
-    function readUserContext() {
-        const user = window.STEAMBOT_USER;
 
-        if (!user || typeof user !== 'object') {
+    function readUserContext() {
+        const user =
+            window.STEAMBOT_USER;
+
+        if (
+            !user ||
+            typeof user !== 'object'
+        ) {
             return;
         }
 
-        state.role = normalizeRole(
-            user.role
-        );
+        state.role =
+            normalizeRole(
+                user.role
+            );
 
-        state.userId = safeText(
-            user.id,
-            120
-        );
+        state.userId =
+            safeText(
+                user.id,
+                120
+            );
 
-        state.userName = safeText(
-            user.name,
-            80
-        );
+        state.userName =
+            safeText(
+                user.name,
+                80
+            );
     }
 
     // -------------------------------------------------------------------------
@@ -184,16 +301,19 @@ function containsBlockedContent(text) {
     // -------------------------------------------------------------------------
 
     function bindEvents() {
+        // Iniciar
         elements.startButton.addEventListener(
             'click',
             startConversation
         );
 
+        // Desconectar
         elements.disconnectButton.addEventListener(
             'click',
             disconnectConversation
         );
 
+        // Limpar tela
         elements.clearButton.addEventListener(
             'click',
             () => {
@@ -203,16 +323,19 @@ function containsBlockedContent(text) {
             }
         );
 
+        // Nova conversa
         elements.newConversationButton.addEventListener(
             'click',
             startNewConversation
         );
 
+        // Enviar
         elements.sendButton.addEventListener(
             'click',
             sendMessage
         );
 
+        // Campo de mensagem
         elements.messageInput.addEventListener(
             'input',
             () => {
@@ -222,32 +345,41 @@ function containsBlockedContent(text) {
             }
         );
 
+        // Enter envia.
+        // Shift + Enter quebra linha.
         elements.messageInput.addEventListener(
             'keydown',
             (event) => {
                 if (
-                    event.key === 'Enter'
-                    && !event.shiftKey
+                    event.key === 'Enter' &&
+                    !event.shiftKey
                 ) {
                     event.preventDefault();
+
                     sendMessage();
                 }
             }
         );
 
+        // Sugestões.
         document
-            .querySelectorAll('[data-prompt]')
-            .forEach((button) => {
-                button.addEventListener(
-                    'click',
-                    () => {
-                        selectPrompt(
-                            button.dataset.prompt
-                        );
-                    }
-                );
-            });
+            .querySelectorAll(
+                '[data-prompt]'
+            )
+            .forEach(
+                (button) => {
+                    button.addEventListener(
+                        'click',
+                        () => {
+                            selectPrompt(
+                                button.dataset.prompt
+                            );
+                        }
+                    );
+                }
+            );
 
+        // Perfil.
         elements.profileButtons.forEach(
             (button) => {
                 button.addEventListener(
@@ -261,12 +393,14 @@ function containsBlockedContent(text) {
             }
         );
 
+        // Logo.
         document
             .querySelector('.brand')
             ?.addEventListener(
                 'click',
                 (event) => {
                     event.preventDefault();
+
                     elements.startButton.focus();
                 }
             );
@@ -277,15 +411,16 @@ function containsBlockedContent(text) {
     // -------------------------------------------------------------------------
 
     function normalizeRole(value) {
-        if (typeof value !== 'string') {
+        if (
+            typeof value !== 'string'
+        ) {
             return null;
         }
 
-        const role = (
+        const role =
             value
                 .trim()
-                .toLowerCase()
-        );
+                .toLowerCase();
 
         if (
             [
@@ -314,64 +449,67 @@ function containsBlockedContent(text) {
         value,
         maxLength
     ) {
-        if (typeof value !== 'string') {
+        if (
+            typeof value !== 'string'
+        ) {
             return null;
         }
 
-        const normalized = (
+        const normalized =
             value
                 .trim()
-                .replace(/\s+/g, ' ')
-        );
+                .replace(
+                    /\s+/g,
+                    ' '
+                );
 
-        return (
-            normalized
-                ? normalized.slice(
-                    0,
-                    maxLength
-                )
-                : null
-        );
+        return normalized
+            ? normalized.slice(
+                0,
+                maxLength
+            )
+            : null;
     }
 
+    // -------------------------------------------------------------------------
+    // Escolha do perfil
+    // -------------------------------------------------------------------------
+
     function selectRole(role) {
-        const normalizedRole = normalizeRole(
-            role
-        );
+        const normalizedRole =
+            normalizeRole(role);
 
         if (!normalizedRole) {
             return;
         }
 
-        const changed = (
-            state.role !== normalizedRole
-        );
+        /**
+         * REGRA PRINCIPAL:
+         *
+         * Se existir uma conexão ou tentativa de conexão,
+         * o perfil não poderá mais ser alterado.
+         *
+         * Para trocar, o usuário precisa clicar em
+         * "Desconectar".
+         */
+        if (
+            state.connected ||
+            state.socket
+        ) {
+            showToast(
+                'Encerre a sessão atual antes de trocar de perfil.',
+                'error'
+            );
 
-        state.role = normalizedRole;
+            return;
+        }
+
+        state.role =
+            normalizedRole;
 
         applyRoleToInterface();
 
-        /**
-         * Caso o usuário mude de perfil
-         * durante uma sessão ativa,
-         * avisamos o backend.
-         */
-        if (
-            changed
-            && state.connected
-            && state.socket
-        ) {
-            state.socket.emit(
-                'definir_perfil',
-                buildProfilePayload()
-            );
-        }
-
         updateControls();
-
-        if (state.connected) {
-            elements.messageInput.focus();
-        }
     }
 
     function buildProfilePayload() {
@@ -382,20 +520,24 @@ function containsBlockedContent(text) {
         };
     }
 
+    // -------------------------------------------------------------------------
+    // Atualiza interface conforme perfil
+    // -------------------------------------------------------------------------
+
     function applyRoleToInterface() {
-        const roleConfig = (
+        const roleConfig =
             state.role
-                ? ROLE_CONFIG[state.role]
-                : null
-        );
+                ? ROLE_CONFIG[
+                    state.role
+                ]
+                : null;
 
         // Botões de perfil.
         elements.profileButtons.forEach(
             (button) => {
-                const isActive = (
+                const isActive =
                     button.dataset.profile
-                    === state.role
-                );
+                    === state.role;
 
                 button.classList.toggle(
                     'is-active',
@@ -409,55 +551,51 @@ function containsBlockedContent(text) {
             }
         );
 
-        // Sugestões do rodapé.
+        // Sugestões inferiores.
         elements.suggestionGroups.forEach(
             (group) => {
-                group.hidden = (
-                    !state.role
-                    || group.dataset.suggestionGroup
-                    !== state.role
-                );
+                group.hidden =
+                    !state.role ||
+                    group.dataset.suggestionGroup
+                    !== state.role;
             }
         );
 
         // Sugestões iniciais.
         elements.quickPromptGroups.forEach(
             (group) => {
-                /**
-                 * Antes de selecionar perfil,
-                 * mostramos o conjunto de aluno
-                 * apenas como exemplo inicial.
-                 */
-                const visibleRole = (
-                    state.role
-                    || 'student'
-                );
+                const visibleRole =
+                    state.role ||
+                    'student';
 
-                group.hidden = (
+                group.hidden =
                     group.dataset.quickPrompts
-                    !== visibleRole
-                );
+                    !== visibleRole;
             }
         );
 
-        if (elements.profileLabel) {
-            elements.profileLabel.textContent = (
-                roleConfig?.label
-                || 'Não definido'
-            );
+        // Texto do perfil na sidebar.
+        if (
+            elements.profileLabel
+        ) {
+            elements.profileLabel.textContent =
+                roleConfig?.label ||
+                'Não definido';
         }
 
-        if (elements.activeProfileChip) {
-            elements.activeProfileChip.textContent = (
-                roleConfig?.label
-                || 'Escolha um perfil'
-            );
+        // Chip no topo.
+        if (
+            elements.activeProfileChip
+        ) {
+            elements.activeProfileChip.textContent =
+                roleConfig?.label ||
+                'Escolha um perfil';
         }
 
-        elements.messageInput.placeholder = (
-            roleConfig?.placeholder
-            || 'Escolha um perfil e inicie o Sparky…'
-        );
+        // Placeholder.
+        elements.messageInput.placeholder =
+            roleConfig?.placeholder ||
+            'Escolha um perfil e inicie o Sparky…';
     }
 
     // -------------------------------------------------------------------------
@@ -465,22 +603,32 @@ function containsBlockedContent(text) {
     // -------------------------------------------------------------------------
 
     function startConversation() {
-        if (state.connected) {
+        // Já conectado.
+        if (
+            state.connected
+        ) {
             elements.messageInput.focus();
+
             return;
         }
 
-        if (!state.role) {
+        // Sem perfil.
+        if (
+            !state.role
+        ) {
             showToast(
                 'Escolha Aluno ou Professor antes de iniciar.',
                 'error'
             );
 
-            elements.profileButtons[0]?.focus();
+            elements
+                .profileButtons[0]
+                ?.focus();
 
             return;
         }
 
+        // Socket.IO não carregou.
         if (
             typeof window.io
             !== 'function'
@@ -499,44 +647,60 @@ function containsBlockedContent(text) {
         }
 
         destroySocket();
+
         resetPendingRequest();
 
-        state.manualDisconnect = false;
-        state.connectErrorShown = false;
-        state.welcomeShown = false;
-        state.sessionStartedAt = null;
+        state.manualDisconnect =
+            false;
 
-        elements.sessionTime.textContent = (
-            '00:00'
-        );
+        state.connectErrorShown =
+            false;
+
+        state.welcomeShown =
+            false;
+
+        state.sessionStartedAt =
+            null;
+
+        elements.sessionTime.textContent =
+            '00:00';
 
         updateConnectionStatus(
             'connecting',
             'Conectando ao Sparky…'
         );
 
-        const socket = window.io(
-            CONFIG.backendUrl,
-            {
-                ...CONFIG.socketOptions,
+        // O perfil é enviado UMA VEZ,
+        // no momento da conexão.
+        const socket =
+            window.io(
+                CONFIG.backendUrl,
+                {
+                    ...CONFIG.socketOptions,
 
-                /**
-                 * Este objeto chega no argumento
-                 * auth do evento "connect"
-                 * no backend.
-                 */
-                auth: buildProfilePayload()
-            }
-        );
+                    auth:
+                        buildProfilePayload()
+                }
+            );
 
-        state.socket = socket;
+        state.socket =
+            socket;
 
         registerSocketEvents(
             socket
         );
 
+        /**
+         * Assim que state.socket recebe um valor,
+         * updateControls() bloqueia os botões
+         * Aluno/Professor.
+         */
         updateControls();
     }
+
+    // -------------------------------------------------------------------------
+    // Eventos do Socket
+    // -------------------------------------------------------------------------
 
     function registerSocketEvents(
         socket
@@ -549,13 +713,18 @@ function containsBlockedContent(text) {
             'connect',
             () => {
                 if (
-                    !isCurrentSocket(socket)
+                    !isCurrentSocket(
+                        socket
+                    )
                 ) {
                     return;
                 }
 
-                state.connected = true;
-                state.connectErrorShown = false;
+                state.connected =
+                    true;
+
+                state.connectErrorShown =
+                    false;
 
                 startSessionTimer();
 
@@ -571,15 +740,17 @@ function containsBlockedContent(text) {
         );
 
         // ---------------------------------------------------------------------
-        // Informações iniciais
+        // Mensagem inicial
         // ---------------------------------------------------------------------
 
         socket.on(
             'status_conexao',
             (data) => {
                 if (
-                    !isCurrentSocket(socket)
-                    || state.welcomeShown
+                    !isCurrentSocket(
+                        socket
+                    ) ||
+                    state.welcomeShown
                 ) {
                     return;
                 }
@@ -590,26 +761,32 @@ function containsBlockedContent(text) {
 
                 addMessage(
                     'bot',
-                    data?.mensagem_inicial
-                    || (
-                        'Olá! Eu sou o Sparky. '
-                        + 'Como posso ajudar hoje?'
+                    data?.mensagem_inicial ||
+                    (
+                        'Olá! Eu sou o Sparky. ' +
+                        'Como posso ajudar hoje?'
                     )
                 );
 
-                state.welcomeShown = true;
+                state.welcomeShown =
+                    true;
             }
         );
 
         // ---------------------------------------------------------------------
-        // Perfil atualizado
+        // Compatibilidade com evento de perfil atualizado
+        //
+        // O frontend não envia mais esse evento.
+        // O backend também deve bloquear alterações.
         // ---------------------------------------------------------------------
 
         socket.on(
             'perfil_atualizado',
             (data) => {
                 if (
-                    !isCurrentSocket(socket)
+                    !isCurrentSocket(
+                        socket
+                    )
                 ) {
                     return;
                 }
@@ -624,19 +801,11 @@ function containsBlockedContent(text) {
 
                 addMessage(
                     'bot',
-                    data?.mensagem
-                    || (
-                        'Perfil atualizado. '
-                        + 'Como posso ajudar?'
+                    data?.mensagem ||
+                    (
+                        'Perfil atualizado. ' +
+                        'Como posso ajudar?'
                     )
-                );
-
-                showToast(
-                    `Perfil alterado para ${ROLE_CONFIG[
-                        state.role
-                    ]?.label
-                    || 'novo perfil'
-                    }.`
                 );
             }
         );
@@ -649,12 +818,15 @@ function containsBlockedContent(text) {
             'disconnect',
             (reason) => {
                 if (
-                    !isCurrentSocket(socket)
+                    !isCurrentSocket(
+                        socket
+                    )
                 ) {
                     return;
                 }
 
-                state.connected = false;
+                state.connected =
+                    false;
 
                 setProcessing(
                     false
@@ -665,18 +837,17 @@ function containsBlockedContent(text) {
                 resetPendingRequest();
 
                 if (
-                    state.manualDisconnect
-                    || reason
-                    === 'io client disconnect'
+                    state.manualDisconnect ||
+                    reason ===
+                    'io client disconnect'
                 ) {
                     updateConnectionStatus(
                         'offline',
                         'Sessão encerrada'
                     );
 
-                    elements.sessionLabel.textContent = (
-                        'Encerrada'
-                    );
+                    elements.sessionLabel.textContent =
+                        'Encerrada';
                 } else {
                     updateConnectionStatus(
                         'connecting',
@@ -701,12 +872,15 @@ function containsBlockedContent(text) {
             'connect_error',
             () => {
                 if (
-                    !isCurrentSocket(socket)
+                    !isCurrentSocket(
+                        socket
+                    )
                 ) {
                     return;
                 }
 
-                state.connected = false;
+                state.connected =
+                    false;
 
                 updateConnectionStatus(
                     'offline',
@@ -728,7 +902,8 @@ function containsBlockedContent(text) {
                         'error'
                     );
 
-                    state.connectErrorShown = true;
+                    state.connectErrorShown =
+                        true;
                 }
             }
         );
@@ -741,67 +916,62 @@ function containsBlockedContent(text) {
             'status_bot',
             (data) => {
                 if (
-                    !isCurrentSocket(socket)
+                    !isCurrentSocket(
+                        socket
+                    )
                 ) {
                     return;
                 }
 
-                const requestId = (
-                    data?.request_id
-                    || null
-                );
+                const requestId =
+                    data?.request_id ||
+                    null;
 
-                /**
-                 * Se essa requisição já venceu,
-                 * ignoramos qualquer evento futuro
-                 * relacionado a ela.
-                 */
+                // Requisição já expirou.
                 if (
-                    requestId
-                    && state.expiredRequestIds.has(
+                    requestId &&
+                    state.expiredRequestIds.has(
                         requestId
                     )
                 ) {
                     return;
                 }
 
-                /**
-                 * Impede que uma requisição antiga
-                 * altere o estado de uma nova.
-                 */
+                // Resposta pertence a outra requisição.
                 if (
-                    requestId
-                    && state.pendingRequestId
-                    && requestId
-                    !== state.pendingRequestId
+                    requestId &&
+                    state.pendingRequestId &&
+                    requestId !==
+                    state.pendingRequestId
                 ) {
                     return;
                 }
 
                 setProcessing(
-                    data?.status
-                    === 'processando'
+                    data?.status ===
+                    'processando'
                 );
             }
         );
 
         // ---------------------------------------------------------------------
-        // Nova resposta
+        // Resposta do Sparky
         // ---------------------------------------------------------------------
 
         socket.on(
             'nova_mensagem',
             (data) => {
                 if (
-                    !isCurrentSocket(socket)
+                    !isCurrentSocket(
+                        socket
+                    )
                 ) {
                     return;
                 }
 
-                const requestId = (
-                    data?.request_id
-                    || null
-                );
+                const requestId =
+                    data?.request_id ||
+                    null;
 
                 if (
                     shouldIgnoreResponse(
@@ -815,8 +985,8 @@ function containsBlockedContent(text) {
 
                 if (
                     typeof data?.texto
-                    !== 'string'
-                    || !data.texto.trim()
+                    !== 'string' ||
+                    !data.texto.trim()
                 ) {
                     addMessage(
                         'error',
@@ -856,7 +1026,9 @@ function containsBlockedContent(text) {
             'conversa_resetada',
             (data) => {
                 if (
-                    !isCurrentSocket(socket)
+                    !isCurrentSocket(
+                        socket
+                    )
                 ) {
                     return;
                 }
@@ -869,14 +1041,15 @@ function containsBlockedContent(text) {
 
                 clearChat();
 
-                state.welcomeShown = true;
+                state.welcomeShown =
+                    true;
 
                 addMessage(
                     'bot',
-                    data?.mensagem
-                    || (
-                        'Nova conversa iniciada. '
-                        + 'Como posso ajudar?'
+                    data?.mensagem ||
+                    (
+                        'Nova conversa iniciada. ' +
+                        'Como posso ajudar?'
                     )
                 );
 
@@ -887,22 +1060,23 @@ function containsBlockedContent(text) {
         );
 
         // ---------------------------------------------------------------------
-        // Erros do backend
+        // Erro do backend
         // ---------------------------------------------------------------------
 
         socket.on(
             'erro',
             (data) => {
                 if (
-                    !isCurrentSocket(socket)
+                    !isCurrentSocket(
+                        socket
+                    )
                 ) {
                     return;
                 }
 
-                const requestId = (
-                    data?.request_id
-                    || null
-                );
+                const requestId =
+                    data?.request_id ||
+                    null;
 
                 if (
                     shouldIgnoreResponse(
@@ -916,10 +1090,10 @@ function containsBlockedContent(text) {
 
                 addMessage(
                     'error',
-                    data?.erro
-                    || (
-                        'Não foi possível processar sua mensagem. '
-                        + 'Tente novamente.'
+                    data?.erro ||
+                    (
+                        'Não foi possível processar sua mensagem. ' +
+                        'Tente novamente.'
                     )
                 );
 
@@ -932,14 +1106,16 @@ function containsBlockedContent(text) {
         );
 
         // ---------------------------------------------------------------------
-        // Reconexão
+        // Tentativa de reconexão
         // ---------------------------------------------------------------------
 
         socket.io.on(
             'reconnect_attempt',
             () => {
                 if (
-                    !isCurrentSocket(socket)
+                    !isCurrentSocket(
+                        socket
+                    )
                 ) {
                     return;
                 }
@@ -951,18 +1127,25 @@ function containsBlockedContent(text) {
             }
         );
 
+        // ---------------------------------------------------------------------
+        // Reconexão falhou
+        // ---------------------------------------------------------------------
+
         socket.io.on(
             'reconnect_failed',
             () => {
                 if (
-                    !isCurrentSocket(socket)
+                    !isCurrentSocket(
+                        socket
+                    )
                 ) {
                     return;
                 }
 
                 destroySocket();
 
-                state.connected = false;
+                state.connected =
+                    false;
 
                 resetPendingRequest();
 
@@ -981,63 +1164,82 @@ function containsBlockedContent(text) {
         );
     }
 
+    // -------------------------------------------------------------------------
+    // Sincronização de perfil
+    // -------------------------------------------------------------------------
+
     function syncProfileFromServer(
         profile
     ) {
         if (
-            !profile
-            || typeof profile !== 'object'
+            !profile ||
+            typeof profile !== 'object'
         ) {
             return;
         }
 
-        const serverRole = normalizeRole(
-            profile.role
-        );
+        const serverRole =
+            normalizeRole(
+                profile.role
+            );
 
-        if (serverRole) {
-            state.role = serverRole;
+        if (
+            serverRole
+        ) {
+            state.role =
+                serverRole;
         }
 
-        state.userName = (
+        state.userName =
             safeText(
                 profile.user_name,
                 80
-            )
-            || state.userName
-        );
+            ) ||
+            state.userName;
 
-        state.userId = (
+        state.userId =
             safeText(
                 profile.user_id,
                 120
-            )
-            || state.userId
-        );
+            ) ||
+            state.userId;
 
         applyRoleToInterface();
     }
+
+    // -------------------------------------------------------------------------
+    // Verifica socket atual
+    // -------------------------------------------------------------------------
 
     function isCurrentSocket(
         socket
     ) {
         return (
-            socket === state.socket
+            socket ===
+            state.socket
         );
     }
 
+    // -------------------------------------------------------------------------
+    // Desconectar
+    // -------------------------------------------------------------------------
+
     function disconnectConversation() {
-        if (!state.socket) {
+        if (
+            !state.socket
+        ) {
             return;
         }
 
-        state.manualDisconnect = true;
+        state.manualDisconnect =
+            true;
 
         state.socket.disconnect();
 
         destroySocket();
 
-        state.connected = false;
+        state.connected =
+            false;
 
         setProcessing(
             false
@@ -1052,20 +1254,33 @@ function containsBlockedContent(text) {
             'Sessão encerrada'
         );
 
-        elements.sessionLabel.textContent = (
-            'Encerrada'
-        );
+        elements.sessionLabel.textContent =
+            'Encerrada';
 
         addMessage(
             'system',
-            'Sessão encerrada. Você pode iniciar novamente quando quiser.'
+            'Sessão encerrada. Agora você pode trocar o perfil ou iniciar novamente.'
         );
 
+        /**
+         * Depois de destroySocket(),
+         * state.socket = null.
+         *
+         * Portanto updateControls()
+         * libera novamente os botões
+         * Aluno / Professor.
+         */
         updateControls();
     }
 
+    // -------------------------------------------------------------------------
+    // Destruir socket
+    // -------------------------------------------------------------------------
+
     function destroySocket() {
-        if (!state.socket) {
+        if (
+            !state.socket
+        ) {
             return;
         }
 
@@ -1079,40 +1294,54 @@ function containsBlockedContent(text) {
             state.socket.disconnect();
         }
 
-        state.socket = null;
+        state.socket =
+            null;
     }
 
     // -------------------------------------------------------------------------
-    // Conversa
+    // Nova conversa
     // -------------------------------------------------------------------------
 
     function startNewConversation() {
         if (
-            !state.socket
-            || !state.connected
-            || state.processing
+            !state.socket ||
+            !state.connected ||
+            state.processing
         ) {
             return;
         }
 
+        /**
+         * Nova conversa NÃO troca o perfil.
+         * O perfil só muda após desconectar.
+         */
         state.socket.emit(
             'resetar_conversa'
         );
     }
 
-    function sendMessage() {
-        const text = (
-            elements.messageInput.value.trim()
-        );
+    // -------------------------------------------------------------------------
+    // Enviar mensagem
+    // -------------------------------------------------------------------------
 
+    function sendMessage() {
+        const text =
+            elements.messageInput
+                .value
+                .trim();
+
+        // Nada para enviar.
         if (
-            !text
-            || state.processing
+            !text ||
+            state.processing
         ) {
             return;
         }
 
-        if (!state.role) {
+        // Perfil não escolhido.
+        if (
+            !state.role
+        ) {
             showToast(
                 'Escolha seu perfil antes de enviar uma mensagem.',
                 'error'
@@ -1121,9 +1350,10 @@ function containsBlockedContent(text) {
             return;
         }
 
+        // Mensagem muito grande.
         if (
-            text.length
-            > CONFIG.maxMessageLength
+            text.length >
+            CONFIG.maxMessageLength
         ) {
             showToast(
                 `A mensagem deve ter até ${CONFIG.maxMessageLength} caracteres.`,
@@ -1133,9 +1363,10 @@ function containsBlockedContent(text) {
             return;
         }
 
+        // Sem conexão.
         if (
-            !state.socket
-            || !state.connected
+            !state.socket ||
+            !state.connected
         ) {
             showToast(
                 'Inicie o Sparky antes de enviar uma mensagem.',
@@ -1145,51 +1376,62 @@ function containsBlockedContent(text) {
             return;
         }
 
+        // ---------------------------------------------------------------------
+        // Moderação simples do frontend
+        // ---------------------------------------------------------------------
 
-        if (containsBlockedContent(text)) {
+        if (
+            containsBlockedContent(
+                text
+            )
+        ) {
+            showToast(
+                'Essa mensagem contém conteúdo não permitido na plataforma.',
+                'error'
+            );
 
-    showToast(
-        'Essa mensagem contém conteúdo não permitido na plataforma.',
-        'error'
-    );
+            addMessage(
+                'error',
+                'O Sparky aceita apenas conteúdos apropriados para o ambiente educacional.'
+            );
 
-    addMessage(
-        'error',
-        'O Sparky aceita apenas conteúdos apropriados para o ambiente educacional.'
-    );
+            elements.messageInput.value =
+                '';
 
-    elements.messageInput.value = '';
+            updateCharacterCounter();
 
-    updateCharacterCounter();
+            resizeComposer();
 
-    resizeComposer();
+            updateControls();
 
-    return;
-}
+            return;
+        }
+
+        // ---------------------------------------------------------------------
+        // Request ID
+        // ---------------------------------------------------------------------
+
+        const requestId =
+            createRequestId();
+
+        state.pendingRequestId =
+            requestId;
 
         /**
-         * Cada mensagem recebe um ID único.
-         *
-         * Isso permite identificar se uma resposta
-         * pertence à mensagem atual ou a uma
-         * requisição antiga.
+         * Quando o usuário envia a primeira
+         * mensagem, escondemos as sugestões
+         * grandes para priorizar o chat.
          */
-        const requestId = (
-            createRequestId()
-        );
-
-        state.pendingRequestId = (
-            requestId
-        );
-
-        elements.quickStart.hidden = true;
+        elements.quickStart.hidden =
+            true;
 
         addMessage(
             'user',
             text
         );
 
-        elements.messageInput.value = '';
+        elements.messageInput.value =
+            '';
 
         updateCharacterCounter();
 
@@ -1202,8 +1444,11 @@ function containsBlockedContent(text) {
         state.socket.emit(
             'enviar_mensagem',
             {
-                mensagem: text,
-                request_id: requestId
+                mensagem:
+                    text,
+
+                request_id:
+                    requestId
             }
         );
 
@@ -1212,14 +1457,22 @@ function containsBlockedContent(text) {
         );
     }
 
+    // -------------------------------------------------------------------------
+    // Sugestões
+    // -------------------------------------------------------------------------
+
     function selectPrompt(
         prompt
     ) {
-        if (!prompt) {
+        if (
+            !prompt
+        ) {
             return;
         }
 
-        if (!state.role) {
+        if (
+            !state.role
+        ) {
             showToast(
                 'Escolha Aluno ou Professor para usar as sugestões.',
                 'error'
@@ -1228,21 +1481,24 @@ function containsBlockedContent(text) {
             return;
         }
 
-        elements.messageInput.value = (
+        elements.messageInput.value =
             prompt.slice(
                 0,
                 CONFIG.maxMessageLength
-            )
-        );
+            );
 
         updateCharacterCounter();
 
         resizeComposer();
 
-        if (!state.connected) {
+        if (
+            !state.connected
+        ) {
             startConversation();
 
-            if (state.role) {
+            if (
+                state.role
+            ) {
                 showToast(
                     'Sugestão preparada. Aguarde a conexão para enviar.'
                 );
@@ -1253,6 +1509,10 @@ function containsBlockedContent(text) {
 
         updateControls();
     }
+
+    // -------------------------------------------------------------------------
+    // Request ID
+    // -------------------------------------------------------------------------
 
     function createRequestId() {
         if (
@@ -1271,18 +1531,19 @@ function containsBlockedContent(text) {
         );
     }
 
-    /**
-     * Decide se uma resposta recebida
-     * deve ser descartada.
-     */
+    // -------------------------------------------------------------------------
+    // Ignorar respostas antigas
+    // -------------------------------------------------------------------------
+
     function shouldIgnoreResponse(
         requestId
     ) {
         /**
-         * Compatibilidade com versões antigas
-         * do backend que ainda não enviavam ID.
+         * Compatibilidade com backend antigo.
          */
-        if (!requestId) {
+        if (
+            !requestId
+        ) {
             return false;
         }
 
@@ -1295,20 +1556,21 @@ function containsBlockedContent(text) {
         }
 
         return Boolean(
+            state.pendingRequestId &&
+            requestId !==
             state.pendingRequestId
-            && requestId
-            !== state.pendingRequestId
         );
     }
 
     function resetPendingRequest() {
         clearResponseTimeout();
 
-        state.pendingRequestId = null;
+        state.pendingRequestId =
+            null;
     }
 
     // -------------------------------------------------------------------------
-    // Renderização das mensagens
+    // Mensagens
     // -------------------------------------------------------------------------
 
     function addMessage(
@@ -1323,140 +1585,132 @@ function containsBlockedContent(text) {
             'error'
         ];
 
-        const normalizedSender = (
-            validSenders.includes(sender)
+        const normalizedSender =
+            validSenders.includes(
+                sender
+            )
                 ? sender
-                : 'bot'
-        );
+                : 'bot';
 
-        const message = (
+        const message =
             document.createElement(
                 'article'
-            )
-        );
+            );
 
-        const safeTextValue = String(
-            text ?? ''
-        );
+        const safeTextValue =
+            String(
+                text ?? ''
+            );
 
         // ---------------------------------------------------------------------
-        // Mensagens de sistema e erro
+        // Sistema / erro
         // ---------------------------------------------------------------------
 
         if (
-            normalizedSender === 'system'
-            || normalizedSender === 'error'
+            normalizedSender ===
+            'system' ||
+            normalizedSender ===
+            'error'
         ) {
-            message.className = (
-                'message is-system'
-            );
+            message.className =
+                'message is-system';
 
-            const pill = (
+            const pill =
                 document.createElement(
                     'p'
-                )
-            );
+                );
 
-            pill.className = (
-                `system-pill${normalizedSender
-                    === 'error'
-                    ? ' is-error'
-                    : ''
-                }`
-            );
+            pill.className =
+                `system-pill${
+                    normalizedSender ===
+                    'error'
+                        ? ' is-error'
+                        : ''
+                }`;
 
-            pill.textContent = (
-                safeTextValue
-            );
+            pill.textContent =
+                safeTextValue;
 
             message.appendChild(
                 pill
             );
-        } else {
-            // -----------------------------------------------------------------
-            // Mensagem comum
-            // -----------------------------------------------------------------
+        }
 
-            message.className = (
-                `message is-${normalizedSender}`
-            );
+        // ---------------------------------------------------------------------
+        // Usuário / bot
+        // ---------------------------------------------------------------------
 
-            const avatar = (
+        else {
+            message.className =
+                `message is-${normalizedSender}`;
+
+            // Avatar.
+            const avatar =
                 document.createElement(
                     'span'
-                )
-            );
+                );
 
-            avatar.className = (
-                'avatar'
-            );
+            avatar.className =
+                'avatar';
 
             avatar.setAttribute(
                 'aria-hidden',
                 'true'
             );
 
-            avatar.textContent = (
-                normalizedSender === 'user'
+            avatar.textContent =
+                normalizedSender ===
+                'user'
                     ? 'EU'
-                    : 'S+'
-            );
+                    : 'S+';
 
-            // -----------------------------------------------------------------
-            // Card
-            // -----------------------------------------------------------------
-
-            const card = (
+            // Card.
+            const card =
                 document.createElement(
                     'div'
-                )
-            );
+                );
 
-            card.className = (
-                'message-card'
-            );
+            card.className =
+                'message-card';
 
             // -----------------------------------------------------------------
             // Cabeçalho da mensagem
             // -----------------------------------------------------------------
 
-            const meta = (
+            const meta =
                 document.createElement(
                     'div'
-                )
-            );
+                );
 
-            meta.className = (
-                'message-meta'
-            );
+            meta.className =
+                'message-meta';
 
-            const author = (
+            const author =
                 document.createElement(
                     'span'
-                )
-            );
+                );
 
-            author.textContent = (
-                normalizedSender === 'user'
+            author.textContent =
+                normalizedSender ===
+                'user'
                     ? 'Você'
-                    : 'Sparky'
-            );
+                    : 'Sparky';
 
-            const time = (
+            const time =
                 document.createElement(
                     'time'
-                )
-            );
+                );
 
-            const now = new Date();
+            const now =
+                new Date();
 
-            time.dateTime = (
-                now.toISOString()
-            );
+            time.dateTime =
+                now.toISOString();
 
-            time.textContent = (
-                formatTime(now)
-            );
+            time.textContent =
+                formatTime(
+                    now
+                );
 
             meta.append(
                 author,
@@ -1467,32 +1721,25 @@ function containsBlockedContent(text) {
             // Conteúdo
             // -----------------------------------------------------------------
 
-            const content = (
+            const content =
                 document.createElement(
                     'div'
-                )
-            );
+                );
 
-            content.className = (
-                'message-content'
-            );
+            content.className =
+                'message-content';
 
             if (
-                normalizedSender
-                === 'bot'
+                normalizedSender ===
+                'bot'
             ) {
                 renderSafeMarkdown(
                     content,
                     safeTextValue
                 );
             } else {
-                /**
-                 * Mensagens do usuário usam
-                 * textContent para evitar HTML.
-                 */
-                content.textContent = (
-                    safeTextValue
-                );
+                content.textContent =
+                    safeTextValue;
             }
 
             card.append(
@@ -1501,12 +1748,13 @@ function containsBlockedContent(text) {
             );
 
             // -----------------------------------------------------------------
-            // Ações da resposta
+            // Copiar resposta
             // -----------------------------------------------------------------
 
             if (
-                normalizedSender === 'bot'
-                && options.allowCopy
+                normalizedSender ===
+                'bot' &&
+                options.allowCopy
             ) {
                 card.appendChild(
                     createMessageActions(
@@ -1520,13 +1768,13 @@ function containsBlockedContent(text) {
                 card
             );
 
-            state.messageCount += 1;
+            state.messageCount +=
+                1;
 
-            elements.messageCount.textContent = (
+            elements.messageCount.textContent =
                 String(
                     state.messageCount
-                )
-            );
+                );
         }
 
         elements.chatBox.appendChild(
@@ -1534,75 +1782,72 @@ function containsBlockedContent(text) {
         );
 
         /**
-         * Depois que a conversa começa,
-         * as sugestões iniciais desaparecem.
+         * Assim que houver uma mensagem real
+         * de usuário/bot, as sugestões grandes
+         * desaparecem.
          */
-        elements.quickStart.hidden = (
-            state.messageCount > 0
-        );
+        elements.quickStart.hidden =
+            state.messageCount >
+            0;
 
         requestAnimationFrame(
             () => {
                 message.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'nearest'
+                    behavior:
+                        'smooth',
+
+                    block:
+                        'nearest'
                 });
             }
         );
     }
 
     // -------------------------------------------------------------------------
-    // Ações das mensagens
+    // Ações das respostas
     // -------------------------------------------------------------------------
 
     function createMessageActions(
         text
     ) {
-        const actions = (
+        const actions =
             document.createElement(
                 'div'
-            )
-        );
+            );
 
-        actions.className = (
-            'message-actions'
-        );
+        actions.className =
+            'message-actions';
 
-        const copyButton = (
+        const copyButton =
             document.createElement(
                 'button'
-            )
-        );
+            );
 
-        copyButton.type = (
-            'button'
-        );
+        copyButton.type =
+            'button';
 
-        copyButton.className = (
-            'message-action'
-        );
+        copyButton.className =
+            'message-action';
 
-        copyButton.textContent = (
-            'Copiar'
-        );
+        copyButton.textContent =
+            'Copiar';
 
         copyButton.addEventListener(
             'click',
             async () => {
                 try {
-                    await navigator.clipboard.writeText(
-                        text
-                    );
+                    await navigator.clipboard
+                        .writeText(
+                            text
+                        );
 
-                    copyButton.textContent = (
-                        'Copiado ✓'
-                    );
+                    copyButton.textContent =
+                        'Copiado ✓';
 
                     window.setTimeout(
                         () => {
-                            copyButton.textContent = (
-                                'Copiar'
-                            );
+                            copyButton.textContent =
+                                'Copiar';
                         },
                         1600
                     );
@@ -1631,20 +1876,19 @@ function containsBlockedContent(text) {
         text
     ) {
         if (
-            window.marked
-            && window.DOMPurify
+            window.marked &&
+            window.DOMPurify
         ) {
-            const parsed = (
+            const parsed =
                 window.marked.parse(
                     text,
                     {
                         breaks: true,
                         gfm: true
                     }
-                )
-            );
+                );
 
-            container.innerHTML = (
+            container.innerHTML =
                 window.DOMPurify.sanitize(
                     parsed,
                     {
@@ -1668,18 +1912,20 @@ function containsBlockedContent(text) {
                             'onload'
                         ]
                     }
-                )
-            );
+                );
 
+            // Links abrem de forma segura.
             container
-                .querySelectorAll('a')
+                .querySelectorAll(
+                    'a'
+                )
                 .forEach(
                     (link) => {
-                        link.target = '_blank';
+                        link.target =
+                            '_blank';
 
-                        link.rel = (
-                            'noopener noreferrer'
-                        );
+                        link.rel =
+                            'noopener noreferrer';
                     }
                 );
 
@@ -1687,33 +1933,40 @@ function containsBlockedContent(text) {
         }
 
         /**
-         * Caso Marked ou DOMPurify
-         * não tenham carregado,
-         * mostramos texto puro.
+         * Fallback caso as bibliotecas
+         * externas não carreguem.
          */
-        container.textContent = (
-            text
-        );
+        container.textContent =
+            text;
     }
 
     // -------------------------------------------------------------------------
-    // Limpeza visual
+    // Limpar chat
     // -------------------------------------------------------------------------
 
     function clearChat(
         message = ''
     ) {
-        elements.chatBox.replaceChildren();
+        elements.chatBox
+            .replaceChildren();
 
-        state.messageCount = 0;
+        state.messageCount =
+            0;
 
-        elements.messageCount.textContent = (
-            '0'
-        );
+        elements.messageCount.textContent =
+            '0';
 
-        elements.quickStart.hidden = false;
+        /**
+         * Volta a mostrar as sugestões.
+         * addMessage(bot) poderá escondê-las
+         * novamente depois.
+         */
+        elements.quickStart.hidden =
+            false;
 
-        if (message) {
+        if (
+            message
+        ) {
             addMessage(
                 'system',
                 message
@@ -1722,159 +1975,218 @@ function containsBlockedContent(text) {
     }
 
     // -------------------------------------------------------------------------
-    // Estado dos controles
+    // Estado "Sparky está respondendo"
     // -------------------------------------------------------------------------
 
     function setProcessing(
         processing
     ) {
-        state.processing = Boolean(
-            processing
-        );
+        state.processing =
+            Boolean(
+                processing
+            );
 
-        elements.typingIndicator.hidden = (
-            !state.processing
-        );
+        elements.typingIndicator.hidden =
+            !state.processing;
 
-        const label = (
-            elements.sendButton.querySelector(
-                'span:first-child'
-            )
-        );
+        const label =
+            elements.sendButton
+                .querySelector(
+                    'span:first-child'
+                );
 
-        if (label) {
-            label.textContent = (
+        if (
+            label
+        ) {
+            label.textContent =
                 state.processing
                     ? 'Aguarde'
-                    : 'Enviar'
-            );
+                    : 'Enviar';
         }
 
-        if (!state.processing) {
+        if (
+            !state.processing
+        ) {
             clearResponseTimeout();
         }
 
         updateControls();
     }
 
+    // -------------------------------------------------------------------------
+    // Botões / controles
+    // -------------------------------------------------------------------------
+
     function updateControls() {
-        const hasText = Boolean(
-            elements.messageInput.value.trim()
-        );
+        const hasText =
+            Boolean(
+                elements.messageInput
+                    .value
+                    .trim()
+            );
 
-        const hasRole = Boolean(
-            state.role
-        );
+        const hasRole =
+            Boolean(
+                state.role
+            );
 
-        const canWrite = (
-            state.connected
-            && !state.processing
-            && hasRole
-        );
+        const canWrite =
+            state.connected &&
+            !state.processing &&
+            hasRole;
 
-        const connecting = Boolean(
-            state.socket
-            && !state.connected
-            && !state.manualDisconnect
-        );
+        const connecting =
+            Boolean(
+                state.socket &&
+                !state.connected &&
+                !state.manualDisconnect
+            );
 
-        elements.messageInput.disabled = (
-            !canWrite
-        );
+        /**
+         * Enquanto existir socket,
+         * o perfil permanece travado.
+         *
+         * Isso inclui:
+         * - conectando;
+         * - conectado;
+         * - tentando reconectar.
+         */
+        const profileLocked =
+            Boolean(
+                state.connected ||
+                state.socket
+            );
 
-        elements.sendButton.disabled = (
-            !canWrite
-            || !hasText
-        );
+        // Campo.
+        elements.messageInput.disabled =
+            !canWrite;
 
-        elements.startButton.disabled = (
-            state.connected
-            || connecting
-            || !hasRole
-        );
+        // Botão enviar.
+        elements.sendButton.disabled =
+            !canWrite ||
+            !hasText;
 
-        elements.disconnectButton.disabled = (
-            !state.socket
-        );
+        // Iniciar.
+        elements.startButton.disabled =
+            state.connected ||
+            connecting ||
+            !hasRole;
 
-        elements.newConversationButton.disabled = (
-            !canWrite
+        // Desconectar.
+        elements.disconnectButton.disabled =
+            !state.socket;
+
+        // Nova conversa.
+        elements.newConversationButton.disabled =
+            !canWrite;
+
+        // ---------------------------------------------------------------------
+        // PERFIL BLOQUEADO
+        // ---------------------------------------------------------------------
+
+        elements.profileButtons.forEach(
+            (button) => {
+                button.disabled =
+                    profileLocked;
+
+                button.setAttribute(
+                    'aria-disabled',
+                    String(
+                        profileLocked
+                    )
+                );
+
+                button.title =
+                    profileLocked
+                        ? 'Desconecte o Sparky para trocar de perfil.'
+                        : 'Selecionar este perfil.';
+            }
         );
     }
+
+    // -------------------------------------------------------------------------
+    // Status de conexão
+    // -------------------------------------------------------------------------
 
     function updateConnectionStatus(
         status,
         label
     ) {
-        elements.connectionStatus.className = (
-            `connection-badge is-${status}`
-        );
+        elements.connectionStatus.className =
+            `connection-badge is-${status}`;
 
-        elements.statusLabel.textContent = (
-            label
-        );
-    }
-
-    function updateCharacterCounter() {
-        const length = (
-            elements.messageInput.value.length
-        );
-
-        elements.characterCounter.textContent = (
-            `${length} / ${CONFIG.maxMessageLength}`
-        );
-    }
-
-    function resizeComposer() {
-        elements.messageInput.style.height = (
-            'auto'
-        );
-
-        elements.messageInput.style.height = (
-            `${Math.min(
-                elements.messageInput.scrollHeight,
-                140
-            )}px`
-        );
+        elements.statusLabel.textContent =
+            label;
     }
 
     // -------------------------------------------------------------------------
-    // Cronômetro da sessão
+    // Contador de caracteres
+    // -------------------------------------------------------------------------
+
+    function updateCharacterCounter() {
+        const length =
+            elements.messageInput
+                .value
+                .length;
+
+        elements.characterCounter.textContent =
+            `${length} / ${CONFIG.maxMessageLength}`;
+    }
+
+    // -------------------------------------------------------------------------
+    // Altura automática do textarea
+    // -------------------------------------------------------------------------
+
+    function resizeComposer() {
+        elements.messageInput.style.height =
+            'auto';
+
+        elements.messageInput.style.height =
+            `${Math.min(
+                elements.messageInput.scrollHeight,
+                140
+            )}px`;
+    }
+
+    // -------------------------------------------------------------------------
+    // Cronômetro
     // -------------------------------------------------------------------------
 
     function startSessionTimer() {
         if (
             !state.sessionStartedAt
         ) {
-            state.sessionStartedAt = (
-                Date.now()
-            );
+            state.sessionStartedAt =
+                Date.now();
         }
 
-        elements.sessionLabel.textContent = (
-            'Em andamento'
-        );
+        elements.sessionLabel.textContent =
+            'Em andamento';
 
         updateSessionTimer();
 
-        if (!state.timerId) {
-            state.timerId = (
+        if (
+            !state.timerId
+        ) {
+            state.timerId =
                 window.setInterval(
                     updateSessionTimer,
                     1000
-                )
-            );
+                );
         }
     }
 
     function stopSessionTimer() {
-        if (state.timerId) {
+        if (
+            state.timerId
+        ) {
             window.clearInterval(
                 state.timerId
             );
         }
 
-        state.timerId = null;
+        state.timerId =
+            null;
     }
 
     function updateSessionTimer() {
@@ -1884,37 +2196,40 @@ function containsBlockedContent(text) {
             return;
         }
 
-        const elapsedSeconds = Math.floor(
-            (
-                Date.now()
-                - state.sessionStartedAt
-            )
-            / 1000
-        );
-
-        const minutes = String(
+        const elapsedSeconds =
             Math.floor(
-                elapsedSeconds / 60
-            )
-        ).padStart(
-            2,
-            '0'
-        );
+                (
+                    Date.now() -
+                    state.sessionStartedAt
+                ) / 1000
+            );
 
-        const seconds = String(
-            elapsedSeconds % 60
-        ).padStart(
-            2,
-            '0'
-        );
+        const minutes =
+            String(
+                Math.floor(
+                    elapsedSeconds /
+                    60
+                )
+            ).padStart(
+                2,
+                '0'
+            );
 
-        elements.sessionTime.textContent = (
-            `${minutes}:${seconds}`
-        );
+        const seconds =
+            String(
+                elapsedSeconds %
+                60
+            ).padStart(
+                2,
+                '0'
+            );
+
+        elements.sessionTime.textContent =
+            `${minutes}:${seconds}`;
     }
 
     // -------------------------------------------------------------------------
-    // Timeout
+    // Timeout da resposta
     // -------------------------------------------------------------------------
 
     function armResponseTimeout(
@@ -1922,52 +2237,46 @@ function containsBlockedContent(text) {
     ) {
         clearResponseTimeout();
 
-        state.responseTimeoutId = (
+        state.responseTimeoutId =
             window.setTimeout(
                 () => {
-                    /**
-                     * Se outra mensagem já estiver
-                     * em processamento, não fazemos nada.
-                     */
+                    // Outra requisição assumiu.
                     if (
-                        !state.processing
-                        || state.pendingRequestId
-                        !== requestId
+                        !state.processing ||
+                        state.pendingRequestId !==
+                        requestId
                     ) {
                         return;
                     }
 
                     /**
-                     * Marca esse ID como vencido.
-                     *
-                     * Se a resposta chegar depois,
-                     * será descartada.
+                     * Marca como expirado para que
+                     * uma resposta atrasada seja ignorada.
                      */
                     state.expiredRequestIds.add(
                         requestId
                     );
 
                     /**
-                     * Evita que o Set cresça
-                     * indefinidamente.
+                     * Evita crescimento infinito.
                      */
                     if (
-                        state.expiredRequestIds.size
-                        > 30
+                        state.expiredRequestIds.size >
+                        30
                     ) {
-                        const oldest = (
+                        const oldest =
                             state.expiredRequestIds
                                 .values()
                                 .next()
-                                .value
-                        );
+                                .value;
 
                         state.expiredRequestIds.delete(
                             oldest
                         );
                     }
 
-                    state.pendingRequestId = null;
+                    state.pendingRequestId =
+                        null;
 
                     setProcessing(
                         false
@@ -1976,16 +2285,16 @@ function containsBlockedContent(text) {
                     addMessage(
                         'error',
                         (
-                            'A resposta demorou mais que o esperado. '
-                            + 'Você pode tentar novamente; '
-                            + 'se a resposta antiga chegar depois, '
-                            + 'ela será ignorada.'
+                            'A resposta demorou mais que o esperado. ' +
+                            'Você pode tentar novamente; ' +
+                            'se a resposta antiga chegar depois, ' +
+                            'ela será ignorada.'
                         )
                     );
                 },
+
                 CONFIG.responseTimeoutMs
-            )
-        );
+            );
     }
 
     function clearResponseTimeout() {
@@ -1997,7 +2306,8 @@ function containsBlockedContent(text) {
             );
         }
 
-        state.responseTimeoutId = null;
+        state.responseTimeoutId =
+            null;
     }
 
     // -------------------------------------------------------------------------
@@ -2008,22 +2318,20 @@ function containsBlockedContent(text) {
         message,
         type = 'info'
     ) {
-        const toast = (
+        const toast =
             document.createElement(
                 'div'
-            )
-        );
+            );
 
-        toast.className = (
-            `toast${type === 'error'
-                ? ' is-error'
-                : ''
-            }`
-        );
+        toast.className =
+            `toast${
+                type === 'error'
+                    ? ' is-error'
+                    : ''
+            }`;
 
-        toast.textContent = (
-            message
-        );
+        toast.textContent =
+            message;
 
         elements.toastRegion.appendChild(
             toast
@@ -2038,7 +2346,7 @@ function containsBlockedContent(text) {
     }
 
     // -------------------------------------------------------------------------
-    // Formatação
+    // Horário
     // -------------------------------------------------------------------------
 
     function formatTime(
@@ -2051,7 +2359,9 @@ function containsBlockedContent(text) {
                     hour: '2-digit',
                     minute: '2-digit'
                 }
-            ).format(date)
+            ).format(
+                date
+            )
         );
     }
 })();
